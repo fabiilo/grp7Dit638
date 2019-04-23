@@ -19,11 +19,13 @@ int32_t main(int32_t argc, char **argv){
     std::cout << commandlineArguments["cid"] << "\n";
     cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
     cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
 
-    float baseSpeed = std::stof(commandlineArguments["speed"]);
+    float baseSpeed = std::stof(commandlineArguments["s"]);
+    float turnAngle = std::stof(commandlineArguments["a"]);
     float speed{0.0};
-    std::cout << "The speed is set to: " << baseSpeed << std::endl;
- 
+    
+
     float tempDistReading{0.0};
     auto onDistanceReading{[&speed, &baseSpeed, &tempDistReading](cluon::data::Envelope &&envelope)
             // &<variables> will be captured by reference (instead of value only)
@@ -42,20 +44,17 @@ int32_t main(int32_t argc, char **argv){
     od4Distance.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistanceReading);
    
     opendlv::proxy::PedalPositionRequest pedalReq;
-    const int16_t delay{50};
-    // bool loopCheck = true; 
-    // loopCheck = std::thread checkLoop(breakLoop());
-
-    while(od4Speed.isRunning()){
-
-        pedalReq.position(speed);
-        od4Speed.send(pedalReq);
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-
-    }
-
-    pedalReq.position(0.0);
+    opendlv::proxy::GroundSteeringRequest steerReq;
+    const int16_t delay{2000};
+   
+    pedalReq.position(speed);
+    steerReq.groundSteering(turnAngle);
     od4Speed.send(pedalReq);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+    pedalReq.position(0.0);
+    steerReq.groundSteering(0.0);
+    
     return 0;
 }
 
@@ -66,16 +65,10 @@ float calculatePedel(float distance, float currentVelocity){
     // above 0.30 needs to speed up
     float panicStop{0.0};
     float minDistance{0.15};
-    float avgDistance{0.25};
-    float maxDistance{0.35};
    
-   if(distance > maxDistance){
-       currentVelocity = currentVelocity;
-   }else if(distance <= avgDistance && distance >= minDistance){
-       currentVelocity = currentVelocity;
-   }else if(distance > avgDistance && distance <= maxDistance){
+   if(distance > minDistance){
        return currentVelocity;
-   }else if(distance < minDistance){
+   }else {
        currentVelocity = panicStop;
    } 
     return currentVelocity;

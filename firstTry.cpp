@@ -29,12 +29,13 @@ int32_t main(int32_t argc, char **argv){
     float tempDistReading{0.0};
     auto onDistanceReading{[&speed, &baseSpeed, &tempDistReading](cluon::data::Envelope &&envelope)
             // &<variables> will be captured by reference (instead of value only)
+            // Local variables are not available outside the lambda function
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(envelope));
-                const uint16_t senderStamp = envelope.senderStamp(); // Local variables are not available outside the lambda function
+                const uint16_t senderStamp = envelope.senderStamp(); 
                 if(senderStamp == 0)
                 {
-                    tempDistReading = msg.distance(); // Corresponds to odvd message set
+                    tempDistReading = msg.distance();
                     speed = calculatePedel(tempDistReading, baseSpeed);
                     std::cout << "The speed of the car is: " << speed << std::endl;
                 }
@@ -57,7 +58,7 @@ int32_t main(int32_t argc, char **argv){
     
     return 0;
 }
-
+//checks a objects ditance from the car, panic stops if distance too small
 float calculatePedel(float distance, float currentVelocity){
     // 0.10 minimum
     // 0.15 - 0.20 it needs to slowdown

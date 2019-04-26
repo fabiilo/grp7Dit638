@@ -1,0 +1,6 @@
+classes = 1
+train  = /home/fabs/snowman-2/snowman_train.txt
+valid  = /home/fabs/snowman-2/snowman_test.txt
+names = /home/fabs/snowman-2/classes.names
+backup = /home/fabs/snowman-2/weights
+

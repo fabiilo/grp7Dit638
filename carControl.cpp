@@ -21,8 +21,6 @@ int32_t main(int32_t argc, char **argv){
     cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
    
-    
-
     float baseSpeed = std::stof(commandlineArguments["s"]);
     // float turnAngle = std::stof(commandlineArguments["a"]);
     std::string message = commandlineArguments["message"];
@@ -50,6 +48,7 @@ int32_t main(int32_t argc, char **argv){
     opendlv::proxy::PedalPositionRequest pedalReq;
     opendlv::proxy::GroundSteeringRequest steerReq;
     
+    const int16_t systemDelay{50};
     const int16_t delay{500};
     const int16_t turnDelay{2000};
     bool running = 1;
@@ -57,22 +56,27 @@ int32_t main(int32_t argc, char **argv){
     // Main loop where the diffrent actions will be in place
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     while(running != 0){
+
         if(message == "FOLLOW"){
             pedalReq.position(speed);
             od4Speed.send(pedalReq);
-        }else if (message == "TURN RIGHT"){
+        }else if (message == "RIGHT"){
             pedalReq.position(0.12);
             od4Speed.send(pedalReq);
-            steerReq.groundSteering(0.28);
+            steerReq.groundSteering(-0.28);
             od4Turn.send(steerReq);
             std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+            steerReq.groundSteering(0.0);
+            od4Turn.send(steerReq);
             message = "FOLLOW";
-        }else if (message == "TURN LEFT"){
+        }else if (message == "LEFT"){
             pedalReq.position(0.12);
             od4Speed.send(pedalReq);
-            steerReq.groundSteering(-0.45);
+            steerReq.groundSteering(0.42);
             od4Turn.send(steerReq);
             std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+            steerReq.groundSteering(0.0);
+            od4Turn.send(steerReq);
             message = "FOLLOW";
         }else if(message == "STOP"){
             pedalReq.position(0.0);
@@ -81,6 +85,8 @@ int32_t main(int32_t argc, char **argv){
             od4Turn.send(steerReq);
             running = 0;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay));
    }
 
     return 0;

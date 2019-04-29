@@ -12,7 +12,7 @@ RUN cd /opt/sources && \
 	mkdir build && \
     cd build && \
     cmake .. && \
-    make helloworld && cp helloworld /tmp
+    make carControl && cp carControl /tmp
 
 
 #Deploy
@@ -22,5 +22,4 @@ RUN apk update && \
     libstdc++ libgcc && \
     mkdir /opt
 WORKDIR /opt
-COPY --from=builder /tmp/helloworld .
-
+COPY --from=builder /tmp/carControl .

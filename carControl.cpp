@@ -20,14 +20,17 @@ int32_t main(int32_t argc, char **argv){
     cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
     cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
-
-    float baseSpeed = std::stof(commandlineArguments["s"]);
-    float turnAngle = std::stof(commandlineArguments["a"]);
-    float speed{0.0};
+   
     
 
-    float tempDistReading{0.0};
-    auto onDistanceReading{[&speed, &baseSpeed, &tempDistReading](cluon::data::Envelope &&envelope)
+    float baseSpeed = std::stof(commandlineArguments["s"]);
+    // float turnAngle = std::stof(commandlineArguments["a"]);
+    std::string message = commandlineArguments["message"];
+    float speed{0.0};
+    float sonicDistReading{0.0};
+    // float objectDistReading{0.0};
+
+    auto onDistanceReading{[&speed, &baseSpeed, &sonicDistReading](cluon::data::Envelope &&envelope)
             // &<variables> will be captured by reference (instead of value only)
             // Local variables are not available outside the lambda function
             {
@@ -35,27 +38,51 @@ int32_t main(int32_t argc, char **argv){
                 const uint16_t senderStamp = envelope.senderStamp(); 
                 if(senderStamp == 0)
                 {
-                    tempDistReading = msg.distance();
-                    speed = calculatePedel(tempDistReading, baseSpeed);
+                    sonicDistReading = msg.distance();
+                    speed = calculatePedel(sonicDistReading, baseSpeed);
                     std::cout << "The speed of the car is: " << speed << std::endl;
                 }
             }
     };
 
     od4Distance.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistanceReading);
-   
+    
     opendlv::proxy::PedalPositionRequest pedalReq;
     opendlv::proxy::GroundSteeringRequest steerReq;
-    const int16_t delay{2000};
-   
-    pedalReq.position(speed);
-    steerReq.groundSteering(turnAngle);
-    od4Speed.send(pedalReq);
     
+    const int16_t delay{500};
+    const int16_t turnDelay{2000};
+    bool running = 1;
+
+    // Main loop where the diffrent actions will be in place
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-    pedalReq.position(0.0);
-    steerReq.groundSteering(0.0);
-    
+    while(running != 0){
+        if(message == "FOLLOW"){
+            pedalReq.position(speed);
+            od4Speed.send(pedalReq);
+        }else if (message == "TURN RIGHT"){
+            pedalReq.position(0.12);
+            od4Speed.send(pedalReq);
+            steerReq.groundSteering(0.28);
+            od4Turn.send(steerReq);
+            std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+            message = "FOLLOW";
+        }else if (message == "TURN LEFT"){
+            pedalReq.position(0.12);
+            od4Speed.send(pedalReq);
+            steerReq.groundSteering(-0.45);
+            od4Turn.send(steerReq);
+            std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+            message = "FOLLOW";
+        }else if(message == "STOP"){
+            pedalReq.position(0.0);
+            steerReq.groundSteering(0.0);
+            od4Speed.send(pedalReq);
+            od4Turn.send(steerReq);
+            running = 0;
+        }
+   }
+
     return 0;
 }
 //checks a objects ditance from the car, panic stops if distance too small
@@ -71,6 +98,9 @@ float calculatePedel(float distance, float currentVelocity){
        return currentVelocity;
    }else {
        currentVelocity = panicStop;
+       return currentVelocity;
    } 
     return currentVelocity;
 }
+
+ 

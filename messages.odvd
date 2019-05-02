@@ -147,11 +147,19 @@ message opendlv.proxy.GeodeticWgs84Reading [id = 19] {
   double longitude [id = 3];
 }
 
-message opendlv.proxy.ObjectDistanceReading [id = 1999]{
-  
-
+message opendlv.proxy.carReading [id = 1999]{
+  string objID [id = 1];
+  uint32 height [id = 2];
+  uint32 Xpos [id = 3];
+  uint32 Ypos [id = 4];
 }
 
+message opendlv.proxy.signReading [id = 1998]{
+  string type [id = 1];
+  uint32 height [id = 2];
+  uint32 Xpos [id = 3];
+  uint32 Ypos [id = 4];	
+}
 
 message opendlv.proxy.ImageReading [id = 1055] {
     string fourcc [id = 1];

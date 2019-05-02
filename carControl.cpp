@@ -47,6 +47,7 @@ int32_t main(int32_t argc, char **argv){
     
     opendlv::proxy::PedalPositionRequest pedalReq;
     opendlv::proxy::GroundSteeringRequest steerReq;
+    opendlv::proxy
     
     const int16_t systemDelay{50};
     const int16_t delay{500};

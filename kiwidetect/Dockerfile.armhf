@@ -1,0 +1,162 @@
+# Copyright (C) 2019  Christian Berger
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+FROM chrberger/cluon-armhf:latest as builder
+MAINTAINER Christian Berger "christian.berger@gu.se"
+
+RUN [ "cross-build-start" ]
+
+ENV BUILD="ca-certificates \
+         git \
+         build-base \
+         musl-dev \
+         alpine-sdk \
+         make \
+         cmake \
+         gcc \
+         ffmpeg-libs \
+         g++ \
+         libc-dev \
+         linux-headers \
+         libjpeg-turbo \
+         libpng \
+         libwebp \
+         tiff \
+         libavc1394 \
+         jasper-libs \
+         openblas \
+         openexr \
+         libgphoto2 \
+         gstreamer \
+         gtk+2.0 \
+         gtk+2.0-dev \
+         wget \
+         gst-plugins-base"
+
+ENV DEV="clang \
+         clang-dev \
+         cmake \
+         pkgconf \
+         ffmpeg-dev \
+         libwebp-dev \
+         openblas-dev \
+         openexr-dev \
+         gstreamer-dev \
+         gst-plugins-base-dev \
+         libgphoto2-dev \
+         libjpeg-turbo-dev \
+         libpng-dev \
+         tiff-dev \
+         jasper-dev \
+         libavc1394-dev"
+
+
+RUN echo http://dl-4.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+    apk update && \
+    apk upgrade && \
+    apk --no-cache add ${BUILD} ${DEV}
+
+ARG OPENCV_VERSION=3.4.6
+ 
+
+# Python dependencies
+RUN apk add --update --no-cache python3 python3-dev && \
+    apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
+            --update --no-cache py-numpy py-numpy-dev
+    
+
+    # Make Python3 as default
+RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
+    ln -vfs /usr/bin/pip3 /usr/local/bin/pip && \
+    # Fix libpng path
+    ln -vfs /usr/include/libpng16 /usr/include/libpng && \
+    ln -vfs /usr/include/locale.h /usr/include/xlocale.h && \
+    # Download OpenCV source
+    cd /tmp && \
+    wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.tar.gz && \
+    tar -xvzf $OPENCV_VERSION.tar.gz && \
+    rm -vrf $OPENCV_VERSION.tar.gz && \
+    # Configure
+    mkdir -vp /tmp/opencv-$OPENCV_VERSION/build && \
+    cd /tmp/opencv-$OPENCV_VERSION/build && \
+    cmake \
+        # Compiler params
+        -D CMAKE_BUILD_TYPE=RELEASE \
+        -D CMAKE_C_COMPILER=/usr/bin/clang \
+        -D CMAKE_CXX_COMPILER=/usr/bin/clang++ \
+        -D CMAKE_INSTALL_PREFIX=/usr/local \
+        # No examples
+        -D INSTALL_PYTHON_EXAMPLES=NO \
+        -D INSTALL_C_EXAMPLES=NO \
+        -D OPENCV_ENABLE_NONFREE=ON \
+        # Support
+        -D WITH_IPP=NO \
+        -D WITH_1394=NO \
+        -D WITH_LIBV4L=NO \
+        -D WITH_V4l=YES \
+        -D WITH_TBB=NO \
+        -D WITH_FFMPEG=YES \
+        -D WITH_GPHOTO2=YES \
+        -D WITH_GSTREAMER=YES \
+        -D WITH_OPENGL=ON \
+        # NO doc test and other bindings
+        -D BUILD_DOCS=NO \
+        -D BUILD_TESTS=NO \
+        -D BUILD_PERF_TESTS=NO \
+        -D BUILD_EXAMPLES=NO \
+        -D BUILD_opencv_java=NO \
+        -D BUILD_opencv_python2=NO \
+        -D BUILD_ANDROID_EXAMPLES=NO \
+        # Build Python3 bindings only
+        -D PYTHON3_LIBRARY=`find /usr -name libpython3.so` \
+        -D PYTHON_EXECUTABLE=`which python3` \
+        -D PYTHON3_EXECUTABLE=`which python3` \
+        -D BUILD_opencv_python3=YES .. && \
+    # Build
+    make -j`grep -c '^processor' /proc/cpuinfo` && \
+    make install
+
+ENV LD_LIBRARY_PATH /usr/local/lib
+ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig
+ENV LD_LIBRARY_PATH /usr/local/lib64
+
+ADD . /opt/sources
+WORKDIR /opt/sources
+RUN mkdir build && \
+    cd build && \
+    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr .. && \
+    make && make install
+
+RUN [ "cross-build-end" ]
+
+#FROM chrberger/cluon-armhf:latest
+#MAINTAINER Christian Berger "christian.berger@gu.se"
+
+#RUN [ "cross-build-start" ]
+
+#RUN echo http://dl-4.alpinelinux.org/alpine/v3.8/main > /etc/apk/repositories && \
+#    echo http://dl-4.alpinelinux.org/alpine/v3.8/community >> /etc/apk/repositories && \
+#    echo http://dl-4.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+#    apk update && \
+#    apk --no-cache add \
+#        opencv-libs \
+#        libcanberra-gtk3
+
+#RUN [ "cross-build-end" ]
+
+#WORKDIR /usr/bin
+#COPY --from=builder /tmp/bin/image-postprocessing-opencv .
+ENTRYPOINT ["/usr/bin/image-postprocessing-opencv"]
+

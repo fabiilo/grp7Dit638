@@ -12,14 +12,16 @@ RUN cd /opt/sources && \
 	mkdir build && \
     cd build && \
     cmake .. && \
-    make carControl && cp carControl /tmp
+    make carControl && cp carControl /tmp && \
+    make carCommand && cp carCommand /tmp
 
 
 #Deploy
-FROM alpine:3.7
-RUN apk update && \
+ FROM alpine:3.7
+ RUN apk update && \
     apk --no-cache add \
     libstdc++ libgcc && \
     mkdir /opt
-WORKDIR /opt
-COPY --from=builder /tmp/carControl .
+ WORKDIR /opt
+ COPY --from=builder /tmp/carControl .
+ COPY --from=builder /tmp/carCommand .

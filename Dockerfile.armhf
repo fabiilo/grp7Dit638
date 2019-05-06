@@ -15,7 +15,8 @@ RUN cd /opt/sources && \
 	mkdir build && \
     cd build && \
     cmake .. && \
-    make carControl && cp carControl /tmp
+    make carControl && cp carControl /tmp &&\
+    make carCommand && cp carCommand /tmp 
 RUN [ "cross-build-end" ]
 
 #Deploy
@@ -30,5 +31,6 @@ RUN apk update && \
     mkdir /opt
 WORKDIR /opt
 COPY --from=builder /tmp/carControl .
+COPY --from=builder /tmp/carCommand .
 RUN [ "cross-build-end" ]
 

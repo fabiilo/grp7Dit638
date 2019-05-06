@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(carControl)
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 set(OPENDLV_MESSAGE_SET messages.odvd)
 set(CLUON_COMPLETE cluon-complete.hpp)
@@ -9,6 +9,9 @@ set(CLUON_COMPLETE cluon-complete.hpp)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 set(LIBRARIES Threads::Threads)
+
+#get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
+#include_directories(${JSON_INC_PATH})
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/cluon-msc
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -25,7 +28,16 @@ add_custom_target(messages.hpp
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${OPENDLV_MESSAGE_SET} ${CMAKE_BINARY_DIR}/cluon-msc)
 
 include_directories(SYSTEM ${CMAKE_BINARY_DIR})
+link_libraries(${JSONCPP_LIBRARIES})
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/carControl.cpp)
 add_dependencies(${PROJECT_NAME} messages.hpp)
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
+#target_link_libraries(${PROJECT_NAME} jsoncpp_lib)
+
+
+add_executable(carCommand ${CMAKE_CURRENT_SOURCE_DIR}/UDP.cpp)
+add_dependencies(carCommand messages.hpp)
+target_link_libraries(carCommand Threads::Threads)
+#target_link_libraries(carCommand jsoncpp_lib)
+

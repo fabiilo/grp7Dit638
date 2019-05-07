@@ -20,7 +20,7 @@ int32_t main(int32_t argc, char **argv){
     cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
     cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
-    cluon::UDPSender UDPsender{"255.0.0.112", 1239};
+    cluon::UDPSender UDPsender{"255.0.0.111", 1239};
    
     float baseSpeed = std::stof(commandlineArguments["s"]);
     // float turnAngle = std::stof(commandlineArguments["a"]);
@@ -55,7 +55,7 @@ int32_t main(int32_t argc, char **argv){
         });
 
     // recives data from the Object detection software
-    cluon::UDPReceiver reciverObj("225.0.0.113", 1240,[VERBOSE](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
+    cluon::UDPReceiver reciverObj("225.0.0.111", 1240,[VERBOSE](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
             if(VERBOSE == 1){
                 std::cout << data << " was sent by: " << sender << std::endl;
             }

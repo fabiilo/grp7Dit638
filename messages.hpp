@@ -5253,6 +5253,496 @@ void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std
 #endif
 
 
+#ifndef OPENDLV_PROXY_CARREADING_HPP
+#define OPENDLV_PROXY_CARREADING_HPP
+
+#ifdef WIN32
+    // Export symbols if compile flags "LIB_SHARED" and "LIB_EXPORTS" are set on Windows.
+    #ifdef LIB_SHARED
+        #ifdef LIB_EXPORTS
+            #define LIB_API __declspec(dllexport)
+        #else
+            #define LIB_API __declspec(dllimport)
+        #endif
+    #else
+        // Disable definition if linking statically.
+        #define LIB_API
+    #endif
+#else
+    // Disable definition for non-Win32 systems.
+    #define LIB_API
+#endif
+
+#include <string>
+#include <utility>
+namespace opendlv { namespace proxy {
+using namespace std::string_literals; // NOLINT
+class LIB_API CarReading {
+    private:
+        static constexpr const char* TheShortName = "CarReading";
+        static constexpr const char* TheLongName = "opendlv.proxy.CarReading";
+
+    public:
+        inline static int32_t ID() {
+            return 999;
+        }
+        inline static const std::string ShortName() {
+            return TheShortName;
+        }
+        inline static const std::string LongName() {
+            return TheLongName;
+        }
+
+    public:
+        CarReading() = default;
+        CarReading(const CarReading&) = default;
+        CarReading& operator=(const CarReading&) = default;
+        CarReading(CarReading&&) = default;
+        CarReading& operator=(CarReading&&) = default;
+        ~CarReading() = default;
+
+    public:
+        
+        inline CarReading& objID(const std::string &v) noexcept {
+            m_objID = v;
+            return *this;
+        }
+        inline std::string objID() const noexcept {
+            return m_objID;
+        }
+        
+        inline CarReading& height(const uint32_t &v) noexcept {
+            m_height = v;
+            return *this;
+        }
+        inline uint32_t height() const noexcept {
+            return m_height;
+        }
+        
+        inline CarReading& Xpos(const uint32_t &v) noexcept {
+            m_Xpos = v;
+            return *this;
+        }
+        inline uint32_t Xpos() const noexcept {
+            return m_Xpos;
+        }
+        
+        inline CarReading& Ypos(const uint32_t &v) noexcept {
+            m_Ypos = v;
+            return *this;
+        }
+        inline uint32_t Ypos() const noexcept {
+            return m_Ypos;
+        }
+        
+
+    public:
+        template<class Visitor>
+        inline void accept(uint32_t fieldId, Visitor &visitor) {
+            (void)fieldId;
+            (void)visitor;
+//            visitor.preVisit(ID(), ShortName(), LongName());
+            
+            if (1 == fieldId) {
+                doVisit(1, std::move("std::string"s), std::move("objID"s), m_objID, visitor);
+                return;
+            }
+            
+            if (2 == fieldId) {
+                doVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, visitor);
+                return;
+            }
+            
+            if (3 == fieldId) {
+                doVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, visitor);
+                return;
+            }
+            
+            if (4 == fieldId) {
+                doVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, visitor);
+                return;
+            }
+            
+//            visitor.postVisit();
+        }
+
+        template<class Visitor>
+        inline void accept(Visitor &visitor) {
+            visitor.preVisit(ID(), ShortName(), LongName());
+            
+            doVisit(1, std::move("std::string"s), std::move("objID"s), m_objID, visitor);
+            
+            doVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, visitor);
+            
+            doVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, visitor);
+            
+            doVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, visitor);
+            
+            visitor.postVisit();
+        }
+
+        template<class PreVisitor, class Visitor, class PostVisitor>
+        inline void accept(PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+            (void)visit; // Prevent warnings from empty messages.
+            std::forward<PreVisitor>(preVisit)(ID(), ShortName(), LongName());
+            
+            doTripletForwardVisit(1, std::move("std::string"s), std::move("objID"s), m_objID, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, preVisit, visit, postVisit);
+            
+            std::forward<PostVisitor>(postVisit)();
+        }
+
+    private:
+        
+        std::string m_objID{ ""s }; // field identifier = 1.
+        
+        uint32_t m_height{ 0 }; // field identifier = 2.
+        
+        uint32_t m_Xpos{ 0 }; // field identifier = 3.
+        
+        uint32_t m_Ypos{ 0 }; // field identifier = 4.
+        
+};
+}}
+
+template<>
+struct isVisitable<opendlv::proxy::CarReading> {
+    static const bool value = true;
+};
+template<>
+struct isTripletForwardVisitable<opendlv::proxy::CarReading> {
+    static const bool value = true;
+};
+#endif
+
+
+/*
+ * THIS IS AN AUTO-GENERATED FILE. DO NOT MODIFY AS CHANGES MIGHT BE OVERWRITTEN!
+ */
+
+#ifndef VISITABLE_TYPE_TRAIT
+#define VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct visitorSelector {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct visitorSelector<true> {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<typename T>
+struct isVisitable {
+    static const bool value = false;
+};
+
+template<typename T, class Visitor>
+void doVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+    visitorSelector<isVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, visitor);
+}
+#endif
+
+#ifndef TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#define TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct tripletForwardVisitorSelector {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)preVisit;
+        (void)postVisit;
+        std::forward<Visitor>(visit)(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct tripletForwardVisitorSelector<true> {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)fieldIdentifier;
+        (void)typeName;
+        (void)name;
+        // Apply preVisit, visit, and postVisit on value.
+        value.accept(preVisit, visit, postVisit);
+    }
+};
+
+template<typename T>
+struct isTripletForwardVisitable {
+    static const bool value = false;
+};
+
+template< typename T, class PreVisitor, class Visitor, class PostVisitor>
+void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+    tripletForwardVisitorSelector<isTripletForwardVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, std::move(preVisit), std::move(visit), std::move(postVisit)); // NOLINT
+}
+#endif
+
+
+#ifndef OPENDLV_PROXY_SIGNREADING_HPP
+#define OPENDLV_PROXY_SIGNREADING_HPP
+
+#ifdef WIN32
+    // Export symbols if compile flags "LIB_SHARED" and "LIB_EXPORTS" are set on Windows.
+    #ifdef LIB_SHARED
+        #ifdef LIB_EXPORTS
+            #define LIB_API __declspec(dllexport)
+        #else
+            #define LIB_API __declspec(dllimport)
+        #endif
+    #else
+        // Disable definition if linking statically.
+        #define LIB_API
+    #endif
+#else
+    // Disable definition for non-Win32 systems.
+    #define LIB_API
+#endif
+
+#include <string>
+#include <utility>
+namespace opendlv { namespace proxy {
+using namespace std::string_literals; // NOLINT
+class LIB_API SignReading {
+    private:
+        static constexpr const char* TheShortName = "SignReading";
+        static constexpr const char* TheLongName = "opendlv.proxy.SignReading";
+
+    public:
+        inline static int32_t ID() {
+            return 998;
+        }
+        inline static const std::string ShortName() {
+            return TheShortName;
+        }
+        inline static const std::string LongName() {
+            return TheLongName;
+        }
+
+    public:
+        SignReading() = default;
+        SignReading(const SignReading&) = default;
+        SignReading& operator=(const SignReading&) = default;
+        SignReading(SignReading&&) = default;
+        SignReading& operator=(SignReading&&) = default;
+        ~SignReading() = default;
+
+    public:
+        
+        inline SignReading& type(const std::string &v) noexcept {
+            m_type = v;
+            return *this;
+        }
+        inline std::string type() const noexcept {
+            return m_type;
+        }
+        
+        inline SignReading& height(const uint32_t &v) noexcept {
+            m_height = v;
+            return *this;
+        }
+        inline uint32_t height() const noexcept {
+            return m_height;
+        }
+        
+        inline SignReading& Xpos(const uint32_t &v) noexcept {
+            m_Xpos = v;
+            return *this;
+        }
+        inline uint32_t Xpos() const noexcept {
+            return m_Xpos;
+        }
+        
+        inline SignReading& Ypos(const uint32_t &v) noexcept {
+            m_Ypos = v;
+            return *this;
+        }
+        inline uint32_t Ypos() const noexcept {
+            return m_Ypos;
+        }
+        
+
+    public:
+        template<class Visitor>
+        inline void accept(uint32_t fieldId, Visitor &visitor) {
+            (void)fieldId;
+            (void)visitor;
+//            visitor.preVisit(ID(), ShortName(), LongName());
+            
+            if (1 == fieldId) {
+                doVisit(1, std::move("std::string"s), std::move("type"s), m_type, visitor);
+                return;
+            }
+            
+            if (2 == fieldId) {
+                doVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, visitor);
+                return;
+            }
+            
+            if (3 == fieldId) {
+                doVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, visitor);
+                return;
+            }
+            
+            if (4 == fieldId) {
+                doVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, visitor);
+                return;
+            }
+            
+//            visitor.postVisit();
+        }
+
+        template<class Visitor>
+        inline void accept(Visitor &visitor) {
+            visitor.preVisit(ID(), ShortName(), LongName());
+            
+            doVisit(1, std::move("std::string"s), std::move("type"s), m_type, visitor);
+            
+            doVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, visitor);
+            
+            doVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, visitor);
+            
+            doVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, visitor);
+            
+            visitor.postVisit();
+        }
+
+        template<class PreVisitor, class Visitor, class PostVisitor>
+        inline void accept(PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+            (void)visit; // Prevent warnings from empty messages.
+            std::forward<PreVisitor>(preVisit)(ID(), ShortName(), LongName());
+            
+            doTripletForwardVisit(1, std::move("std::string"s), std::move("type"s), m_type, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(2, std::move("uint32_t"s), std::move("height"s), m_height, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(3, std::move("uint32_t"s), std::move("Xpos"s), m_Xpos, preVisit, visit, postVisit);
+            
+            doTripletForwardVisit(4, std::move("uint32_t"s), std::move("Ypos"s), m_Ypos, preVisit, visit, postVisit);
+            
+            std::forward<PostVisitor>(postVisit)();
+        }
+
+    private:
+        
+        std::string m_type{ ""s }; // field identifier = 1.
+        
+        uint32_t m_height{ 0 }; // field identifier = 2.
+        
+        uint32_t m_Xpos{ 0 }; // field identifier = 3.
+        
+        uint32_t m_Ypos{ 0 }; // field identifier = 4.
+        
+};
+}}
+
+template<>
+struct isVisitable<opendlv::proxy::SignReading> {
+    static const bool value = true;
+};
+template<>
+struct isTripletForwardVisitable<opendlv::proxy::SignReading> {
+    static const bool value = true;
+};
+#endif
+
+
+/*
+ * THIS IS AN AUTO-GENERATED FILE. DO NOT MODIFY AS CHANGES MIGHT BE OVERWRITTEN!
+ */
+
+#ifndef VISITABLE_TYPE_TRAIT
+#define VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct visitorSelector {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct visitorSelector<true> {
+    template<typename T, class Visitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+        visitor.visit(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<typename T>
+struct isVisitable {
+    static const bool value = false;
+};
+
+template<typename T, class Visitor>
+void doVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, Visitor &visitor) {
+    visitorSelector<isVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, visitor);
+}
+#endif
+
+#ifndef TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#define TRIPLET_FORWARD_VISITABLE_TYPE_TRAIT
+#include <cstdint>
+#include <string>
+#include <utility>
+
+template<bool b>
+struct tripletForwardVisitorSelector {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)preVisit;
+        (void)postVisit;
+        std::forward<Visitor>(visit)(fieldIdentifier, std::move(typeName), std::move(name), value);
+    }
+};
+
+template<>
+struct tripletForwardVisitorSelector<true> {
+    template<typename T, class PreVisitor, class Visitor, class PostVisitor>
+    static void impl(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+        (void)fieldIdentifier;
+        (void)typeName;
+        (void)name;
+        // Apply preVisit, visit, and postVisit on value.
+        value.accept(preVisit, visit, postVisit);
+    }
+};
+
+template<typename T>
+struct isTripletForwardVisitable {
+    static const bool value = false;
+};
+
+template< typename T, class PreVisitor, class Visitor, class PostVisitor>
+void doTripletForwardVisit(uint32_t fieldIdentifier, std::string &&typeName, std::string &&name, T &value, PreVisitor &&preVisit, Visitor &&visit, PostVisitor &&postVisit) {
+    tripletForwardVisitorSelector<isTripletForwardVisitable<T>::value >::impl(fieldIdentifier, std::move(typeName), std::move(name), value, std::move(preVisit), std::move(visit), std::move(postVisit)); // NOLINT
+}
+#endif
+
+
 #ifndef OPENDLV_PROXY_IMAGEREADING_HPP
 #define OPENDLV_PROXY_IMAGEREADING_HPP
 

@@ -25,7 +25,7 @@ int32_t main(int32_t argc, char **argv){
         std::cout << "EXIT- The car will stop and the system will shut down" << std::endl;
 
         // verbose messages from the Car Control software
-       cluon::UDPReceiver reciver("225.0.0.112", 60002,[&jsonstr, VERBOSE](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
+       cluon::UDPReceiver reciver("225.0.0.112", 60002,[VERBOSE](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
             if(VERBOSE == 1){
                 std::cout << data << " was sent by: " << sender << std::endl;
             } 

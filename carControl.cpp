@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <algorithm>
 #include <list>
 #include "cluon-complete.hpp"
 #include "messages.hpp"
@@ -23,6 +24,21 @@ class carObj {
 
     void print(){
         std::cout << ID <<": "<< height << ", " << Xpos << " ," << Ypos << std::endl;
+    }
+    std::string getID(){    
+        return ID;
+    }
+
+    uint32_t getHeight(){
+        return height;
+    }
+
+    uint32_t getX(){
+        return Xpos;
+    }
+
+    uint32_t getY(){
+        return Ypos;
     }
 };
 
@@ -198,26 +214,35 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
     cluon::OD4Session od4SignReading{CID};
     std::list <carObj> temp, snapShot;
 
-    carObj car1("a",1,1,1);
-    carObj car2("b",2,2,2);        
-    carObj car3("c",3,3,3);
-    carObj car4("d",4,4,4);
-
+    struct HeightCmp{
+        inline bool operator() (const carObj& a, const carObj& b){
+            return a.getHeight < b.getHeight;
+        }
+};
+   
+    carObj car1("a",16,1,1);
+    carObj car2("b",7,2,2);        
+    carObj car3("c",6,3,3);
+    carObj car4("d",22,4,4);
     std::list <carObj> trial{car4,car2,car1,car3};
 
     std::list <carObj> :: iterator it; 
+    std::sort(trial.begin(),trial.end(), HeightCmp());
+
     for(it = trial.begin(); it != trial.end(); ++it){ 
         carObj temp = *it;
+        if(VERBOSE){
         temp.print();
+
+        }
     }
       auto onCarReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
-
-                    std::string ID = msg.objID;
-                    uint32_t height = msg.height;
-                    uint32_t Xpos = msg.Xpos;
-                    uint32_t Ypos = msg.Ypos;
+                    std::string ID = msg.objID();
+                    uint32_t height = msg.height();
+                    uint32_t Xpos = msg.Xpos();
+                    uint32_t Ypos = msg.Ypos();
                     carObj tempCar(ID,height,Xpos,Ypos);
                     temp.push_back(tempCar);
                     if(VERBOSE == 1){
@@ -230,10 +255,10 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
       auto onSignReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
-                    std::string type = msg.type;
-                    uint32_t height = msg.height;
-                    uint32_t Xpos = msg.Xpos;
-                    uint32_t Ypos = msg.Ypos;
+                    std::string type = msg.type();
+                    uint32_t height = msg.height();
+                    uint32_t Xpos = msg.Xpos();
+                    uint32_t Ypos = msg.Ypos();
                     carObj tempSign(type, height, Xpos, Ypos);
 
                     temp.push_back(tempSign);
@@ -242,10 +267,11 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
                     }
             }
     };
-
-
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 
 
     return state;
 }
+
+
+

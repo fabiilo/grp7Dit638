@@ -10,46 +10,43 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
 
-using namespace std;
-
 float calculatePedel(float distance, float currentVelocity);
 int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE);
 
-class carObj{
-    std::string objID;
+class carObj {
+    std::string ID;
     uint32_t height, Xpos, Ypos;
 
     public:
-    carObj(std::string,uint32_t,uint32_t,uint32_t);
-    carObj(opendlv::proxy::CarReading);
-    carObj(opendlv::proxy::SignReading);
+    carObj();
+    carObj(std::string _ID, uint32_t _height, uint32_t _Xpos, uint32_t _Ypos);
 
     void print(){
-        std::cout << objID <<": "<< height << ", " << Xpos << " ," << Ypos << std::endl;
+        std::cout << ID <<": "<< height << ", " << Xpos << " ," << Ypos << std::endl;
     }
 };
 
-carObj::carObj(std::string _objID,uint32_t _height,uint32_t _Xpos,uint32_t _Ypos){
-    objID = _objID;
-    height = _height;
-    Xpos = _Xpos;
-    Ypos = _Ypos;
-}
-
+carObj::carObj(std::string _ID, uint32_t _height, uint32_t _Xpos, uint32_t _Ypos){
+        ID = _ID;
+        height = _height;
+        Xpos = _Xpos;
+        Ypos = _Ypos;
+    }
+/*
 carObj::carObj(opendlv::proxy::CarReading car){
-    objID = car.objID;
+    ID = std::move(car.objID);
     height = car.height;
     Xpos = car.Xpos;
     Ypos = car.Ypos;
 }
 
 carObj::carObj(opendlv::proxy::SignReading sign){
-    objID = sign.type;
+    ID = std::move(sign.type);
     height = sign.height;
     Xpos = sign.Xpos;
     Ypos = sign.Ypos;
 }
-
+*/
 
 int32_t main(int32_t argc, char **argv){
 
@@ -105,7 +102,10 @@ int32_t main(int32_t argc, char **argv){
 
     // Main loop where the diffrent actions will be in place
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-    while(running != 0){
+    while(running != 0){        
+
+        stateView(CID,systemDelay,VERBOSE);
+        running = 0;
 
         if(message == "FORWARD"){
             pedalReq.position(speed);
@@ -196,17 +196,16 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
     int16_t state{0};
     cluon::OD4Session od4CarReading{CID};
     cluon::OD4Session od4SignReading{CID};
-    list <carObj> temp, snapShot;
+    std::list <carObj> temp, snapShot;
 
-    carObj car1{"a",1,1,1};
-    carObj car2{"b",2,2,2};        
-    carObj car3{"c",3,3,3};
-    carObj car4{"d",4,4,4};
+    carObj car1("a",1,1,1);
+    carObj car2("b",2,2,2);        
+    carObj car3("c",3,3,3);
+    carObj car4("d",4,4,4);
 
-    list <carObj> trial{car4,car2,car1,car3};
-    trial.sort();
+    std::list <carObj> trial{car4,car2,car1,car3};
 
-    list <carObj> :: iterator it; 
+    std::list <carObj> :: iterator it; 
     for(it = trial.begin(); it != trial.end(); ++it){ 
         carObj temp = *it;
         temp.print();
@@ -214,7 +213,12 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
       auto onCarReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
-                    carObj tempCar{msg};
+
+                    std::string ID = msg.objID;
+                    uint32_t height = msg.height;
+                    uint32_t Xpos = msg.Xpos;
+                    uint32_t Ypos = msg.Ypos;
+                    carObj tempCar(ID,height,Xpos,Ypos);
                     temp.push_back(tempCar);
                     if(VERBOSE == 1){
                         tempCar.print();
@@ -226,7 +230,12 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
       auto onSignReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
-                    carObj tempSign{msg};
+                    std::string type = msg.type;
+                    uint32_t height = msg.height;
+                    uint32_t Xpos = msg.Xpos;
+                    uint32_t Ypos = msg.Ypos;
+                    carObj tempSign(type, height, Xpos, Ypos);
+
                     temp.push_back(tempSign);
                     if(VERBOSE == 1){
                         tempSign.print();
@@ -234,6 +243,8 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
             }
     };
 
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 
 
     return state;

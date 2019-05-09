@@ -6,19 +6,59 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <list>
 #include "cluon-complete.hpp"
 #include "messages.hpp"
-// #include <jsoncpp/json/json.h>
+
+using namespace std;
 
 float calculatePedel(float distance, float currentVelocity);
+int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE);
+
+class carObj{
+    std::string objID;
+    uint32_t height, Xpos, Ypos;
+
+    public:
+    carObj(std::string,uint32_t,uint32_t,uint32_t);
+    carObj(opendlv::proxy::CarReading);
+    carObj(opendlv::proxy::SignReading);
+
+    void print(){
+        std::cout << objID <<": "<< height << ", " << Xpos << " ," << Ypos << std::endl;
+    }
+};
+
+carObj::carObj(std::string _objID,uint32_t _height,uint32_t _Xpos,uint32_t _Ypos){
+    objID = _objID;
+    height = _height;
+    Xpos = _Xpos;
+    Ypos = _Ypos;
+}
+
+carObj::carObj(opendlv::proxy::CarReading car){
+    objID = car.objID;
+    height = car.height;
+    Xpos = car.Xpos;
+    Ypos = car.Ypos;
+}
+
+carObj::carObj(opendlv::proxy::SignReading sign){
+    objID = sign.type;
+    height = sign.height;
+    Xpos = sign.Xpos;
+    Ypos = sign.Ypos;
+}
+
 
 int32_t main(int32_t argc, char **argv){
 
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
     const bool VERBOSE{commandlineArguments.count("verbose") != 0};
-    cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
-    cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
-    cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    uint16_t CID{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    cluon::OD4Session od4Distance{CID};   
+    cluon::OD4Session od4Speed{CID};
+    cluon::OD4Session od4Turn{CID};
     cluon::UDPSender UDPsender{"255.0.0.112", 1239};
    
     float baseSpeed = std::stof(commandlineArguments["s"]);
@@ -48,13 +88,6 @@ int32_t main(int32_t argc, char **argv){
     // recives commands from the Car Command Software
     cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &message](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
             message = data;
-            if(VERBOSE == 1){
-                std::cout << data << " was sent by: " << sender << std::endl;
-            }
-        });
-
-    // recives data from the Object detection software
-    cluon::UDPReceiver reciverObj("225.0.0.113", 1240,[VERBOSE](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
             if(VERBOSE == 1){
                 std::cout << data << " was sent by: " << sender << std::endl;
             }
@@ -143,20 +176,65 @@ int32_t main(int32_t argc, char **argv){
    
     return 0;
 }
-//checks a objects ditance from the car, panic stops if distance too small
+//checks a objects ditance from the car using Ultra-Sonic Sensors, panic stops if distance to small
 float calculatePedel(float distance, float currentVelocity){
-    // 0.10 minimum
-    // 0.15 - 0.20 it needs to slowdown
-    // 0.20 - 0.30 good distance
-    // above 0.30 needs to speed up
     float panicStop{0.0};
     float minDistance{0.15};
    
    if(distance > minDistance){
        return currentVelocity;
    }else {
-       currentVelocity = panicStop;
-       return currentVelocity;
+       return panicStop;
+      
    } 
     return currentVelocity;
+}
+
+//Captures the messages from the Object Detection and returns a state based on the messages
+int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
+
+    int16_t state{0};
+    cluon::OD4Session od4CarReading{CID};
+    cluon::OD4Session od4SignReading{CID};
+    list <carObj> temp, snapShot;
+
+    carObj car1{"a",1,1,1};
+    carObj car2{"b",2,2,2};        
+    carObj car3{"c",3,3,3};
+    carObj car4{"d",4,4,4};
+
+    list <carObj> trial{car4,car2,car1,car3};
+    trial.sort();
+
+    list <carObj> :: iterator it; 
+    for(it = trial.begin(); it != trial.end(); ++it){ 
+        carObj temp = *it;
+        temp.print();
+    }
+      auto onCarReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
+            {
+                auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
+                    carObj tempCar{msg};
+                    temp.push_back(tempCar);
+                    if(VERBOSE == 1){
+                        tempCar.print();
+                    }
+                
+            }
+    };
+
+      auto onSignReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
+            {
+                auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
+                    carObj tempSign{msg};
+                    temp.push_back(tempSign);
+                    if(VERBOSE == 1){
+                        tempSign.print();
+                    }
+            }
+    };
+
+
+
+    return state;
 }

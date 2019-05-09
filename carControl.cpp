@@ -212,21 +212,22 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
     int16_t state{0};
     cluon::OD4Session od4CarReading{CID};
     cluon::OD4Session od4SignReading{CID};
-    std::list <carObj> temp, snapShot;
+    std::vector <carObj> temp, snapShot;
 
     struct HeightCmp{
-        inline bool operator() (const carObj& a, const carObj& b){
-            return a.getHeight < b.getHeight;
+        inline bool operator() (carObj& a, carObj& b){
+            return (a.getHeight() > b.getHeight());
         }
-};
-   
-    carObj car1("a",16,1,1);
-    carObj car2("b",7,2,2);        
-    carObj car3("c",6,3,3);
-    carObj car4("d",22,4,4);
-    std::list <carObj> trial{car4,car2,car1,car3};
+    };
 
-    std::list <carObj> :: iterator it; 
+        carObj car1("a",16,1,1);
+        carObj car2("b",7,2,2);        
+        carObj car3("c",6,3,3);
+        carObj car4("d",22,4,4);
+        std::vector <carObj> trial{car4,car2,car1,car3};
+    
+    
+    std::vector <carObj> :: iterator it; 
     std::sort(trial.begin(),trial.end(), HeightCmp());
 
     for(it = trial.begin(); it != trial.end(); ++it){ 

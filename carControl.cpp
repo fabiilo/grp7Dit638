@@ -11,9 +11,6 @@
 #include "cluon-complete.hpp"
 #include "messages.hpp"
 
-float calculatePedel(float distance, float currentVelocity);
-std::string stateView(std::vector<carObj> &snapShot, int16_t delay, bool VERBOSE);
-
 class carObj {
     std::string ID;
     uint32_t height, Xpos, Ypos;
@@ -49,6 +46,9 @@ carObj::carObj(std::string _ID, uint32_t _height, uint32_t _Xpos, uint32_t _Ypos
         Ypos = _Ypos;
     }
 
+float calculatePedel(float distance, float currentVelocity);
+std::string stateView(std::vector<carObj> &snapShot, bool VERBOSE);
+
 int32_t main(int32_t argc, char **argv){
 
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
@@ -67,7 +67,7 @@ int32_t main(int32_t argc, char **argv){
     std::string message = "";
     std::string realMessage = "";
     float speed{0.0};
-    float sonicDistReading{0.0};
+    // float sonicDistReading{0.0};
     std::vector <carObj> snapShot;
     
     // recives commands from the Car Command Software
@@ -146,9 +146,9 @@ int32_t main(int32_t argc, char **argv){
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     while(running != 0){        
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay*2));
+        std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay*2));
         logicIsRunning = 0;
-        state = stateView(snapShot,systemDelay,VERBOSE);
+        state = stateView(snapShot,VERBOSE);
 
         if(state == "SIGN"){
             // 35 is a shitty value
@@ -257,7 +257,7 @@ float calculatePedel(float distance, float currentVelocity){
 }
 
 //Captures the messages from the Object Detection and returns a state based on the messages
-std::string stateView(std::vector<carObj> &snapShot, int16_t delay, bool VERBOSE){
+std::string stateView(std::vector<carObj> &snapShot, bool VERBOSE){
     std::string state = "";
     struct HeightCmp{
         inline bool operator() (carObj& a, carObj& b){

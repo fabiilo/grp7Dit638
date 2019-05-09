@@ -214,10 +214,10 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
 
-                    std::string ID = msg.objID;
-                    uint32_t height = msg.height;
-                    uint32_t Xpos = msg.Xpos;
-                    uint32_t Ypos = msg.Ypos;
+                    std::string ID = msg.objID();
+                    uint32_t height = msg.height();
+                    uint32_t Xpos = msg.Xpos();
+                    uint32_t Ypos = msg.Ypos();
                     carObj tempCar(ID,height,Xpos,Ypos);
                     temp.push_back(tempCar);
                     if(VERBOSE == 1){
@@ -230,10 +230,10 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
       auto onSignReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
-                    std::string type = msg.type;
-                    uint32_t height = msg.height;
-                    uint32_t Xpos = msg.Xpos;
-                    uint32_t Ypos = msg.Ypos;
+                    std::string type = msg.type();
+                    uint32_t height = msg.height();
+                    uint32_t Xpos = msg.Xpos();
+                    uint32_t Ypos = msg.Ypos();
                     carObj tempSign(type, height, Xpos, Ypos);
 
                     temp.push_back(tempSign);

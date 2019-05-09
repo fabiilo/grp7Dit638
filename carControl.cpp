@@ -48,21 +48,6 @@ carObj::carObj(std::string _ID, uint32_t _height, uint32_t _Xpos, uint32_t _Ypos
         Xpos = _Xpos;
         Ypos = _Ypos;
     }
-/*
-carObj::carObj(opendlv::proxy::CarReading car){
-    ID = std::move(car.objID);
-    height = car.height;
-    Xpos = car.Xpos;
-    Ypos = car.Ypos;
-}
-
-carObj::carObj(opendlv::proxy::SignReading sign){
-    ID = std::move(sign.type);
-    height = sign.height;
-    Xpos = sign.Xpos;
-    Ypos = sign.Ypos;
-}
-*/
 
 int32_t main(int32_t argc, char **argv){
 
@@ -212,7 +197,8 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
     int16_t state{0};
     cluon::OD4Session od4CarReading{CID};
     cluon::OD4Session od4SignReading{CID};
-    std::vector <carObj> temp, snapShot;
+    std::vector <carObj> snapShot;
+    bool logicIsRunning = 0;
 
     struct HeightCmp{
         inline bool operator() (carObj& a, carObj& b){
@@ -220,56 +206,83 @@ int16_t stateView(uint16_t CID, int16_t delay, bool VERBOSE){
         }
     };
 
+    /*
         carObj car1("a",16,1,1);
         carObj car2("b",7,2,2);        
         carObj car3("c",6,3,3);
         carObj car4("d",22,4,4);
-        std::vector <carObj> trial{car4,car2,car1,car3};
+        std::vector <carObj> snapShot{car4,car2,car1,car3};
+    */
     
-    
-    std::vector <carObj> :: iterator it; 
-    std::sort(trial.begin(),trial.end(), HeightCmp());
 
-    for(it = trial.begin(); it != trial.end(); ++it){ 
-        carObj temp = *it;
-        if(VERBOSE){
-        temp.print();
-
-        }
-    }
-      auto onCarReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
-            {
+      auto onCarReading{[&snapShot,VERBOSE,logicIsRunning](cluon::data::Envelope &&envelope)
+            {   
+                if(logicIsRunning == 1){
                 auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
                     std::string ID = msg.objID();
                     uint32_t height = msg.height();
                     uint32_t Xpos = msg.Xpos();
                     uint32_t Ypos = msg.Ypos();
                     carObj tempCar(ID,height,Xpos,Ypos);
-                    temp.push_back(tempCar);
+                    snapShot.push_back(tempCar);
                     if(VERBOSE == 1){
                         tempCar.print();
                     }
                 
             }
+        }
     };
 
-      auto onSignReading{[&temp,VERBOSE](cluon::data::Envelope &&envelope)
+      auto onSignReading{[&snapShot,VERBOSE,logicIsRunning](cluon::data::Envelope &&envelope)
             {
+                if(logicIsRunning == 1){
                 auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
                     std::string type = msg.type();
                     uint32_t height = msg.height();
                     uint32_t Xpos = msg.Xpos();
                     uint32_t Ypos = msg.Ypos();
                     carObj tempSign(type, height, Xpos, Ypos);
-
-                    temp.push_back(tempSign);
+                    snapShot.push_back(tempSign);
                     if(VERBOSE == 1){
                         tempSign.print();
                     }
             }
+        }
     };
-    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 
+    od4CarReading.dataTrigger(opendlv::proxy::CarReading::ID(), onCarReading);
+    od4SignReading.dataTrigger(opendlv::proxy::SignReading::ID(), onSignReading);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay*2));
+    logicIsRunning = 1;
+ 
+    
+    std::sort(snapShot.begin(),snapShot.end(), HeightCmp());
+    //will print the list out before it is sorted
+    if(VERBOSE)
+    {
+        std::vector <carObj> :: iterator it;
+
+        for(it = snapShot.begin(); it != snapShot.end(); ++it)    
+        { 
+            carObj temp = *it;        
+            temp.print();
+        }
+    }
+
+    // checks if a car or a sign is the closests
+    if(snapShot.begin()->getID().compare("sign"))
+    {      
+        // checks if the sign is close enough or not
+        if(snapShot.begin()->getHeight() > 30){
+            state =2;
+        }else{
+            state = 1;
+        }
+    }else
+    {
+        state = 2;
+    }
 
     return state;
 }

@@ -10,10 +10,12 @@
 #include <list>
 #include "cluon-complete.hpp"
 #include "messages.hpp"
+#include <pthread.h>
 
 class carObj {
     std::string ID;
     uint32_t height, Xpos, Ypos;
+
 
     public:
     carObj();
@@ -55,12 +57,11 @@ int32_t main(int32_t argc, char **argv){
     const bool VERBOSE{commandlineArguments.count("verbose") != 0};
     bool logicIsRunning = 0;
 
-    uint16_t CID{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
-    cluon::OD4Session od4Distance{CID};   
-    cluon::OD4Session od4Speed{CID};
-    cluon::OD4Session od4Turn{CID};
-    cluon::OD4Session od4CarReading{CID};
-    cluon::OD4Session od4SignReading{CID};
+    cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
+    cluon::OD4Session od4Speed{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    cluon::OD4Session od4Turn{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    cluon::OD4Session od4CarReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
+    cluon::OD4Session od4SignReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::UDPSender UDPsender{"255.0.0.112", 1239};
    
     float baseSpeed = std::stof(commandlineArguments["s"]);
@@ -68,8 +69,10 @@ int32_t main(int32_t argc, char **argv){
     std::string realMessage = "";
     float speed{0.0};
     // float sonicDistReading{0.0};
-    std::vector <carObj> snapShot;
-    
+    carObj temp("0",0,0,0);
+    std::vector <carObj> snapShot = {temp};
+    snapShot.clear();
+
     // recives commands from the Car Command Software
     cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &realMessage](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
             realMessage = data;
@@ -121,12 +124,14 @@ int32_t main(int32_t argc, char **argv){
                     uint32_t Ypos = msg.Ypos();
                     carObj tempSign(type, height, Xpos, Ypos);
                     snapShot.push_back(tempSign);
-                    if(VERBOSE == 1){
+                    if(VERBOSE == 1)
+                    {
                         tempSign.print();
                     }
+                }
             }
-        }
     };
+
 
     od4CarReading.dataTrigger(opendlv::proxy::CarReading::ID(), onCarReading);
     od4SignReading.dataTrigger(opendlv::proxy::SignReading::ID(), onSignReading);
@@ -264,12 +269,14 @@ std::string stateView(std::vector<carObj> &snapShot, bool VERBOSE){
             return (a.getHeight() > b.getHeight());
         }
     };
-    /*
-        carObj car1("a",16,1,1);
-        carObj car2("b",7,2,2);        
-        carObj car3("c",6,3,3);
-        carObj car4("d",22,4,4);
-        std::vector <carObj> snapShot{car4,car2,car1,car3};
+    
+      /*  carObj car1("CAR",16,1,1);
+        carObj car2("CAR",7,2,2);        
+        carObj car3("CAR",6,3,3);
+        carObj car4("SIGN",25,4,4);
+        std::vector <carObj> temp2{car4,car2,car1,car3};
+
+        snapShot = temp2;
     */
    
 
@@ -286,10 +293,13 @@ std::string stateView(std::vector<carObj> &snapShot, bool VERBOSE){
             temp.print();
         }
     }
+    //std::cout << (snapShot.begin()->getID() == "SIGN") << std::endl;
+
 
     // checks if a car or a sign is the closests
-    if(snapShot.begin()->getID().compare("SIGN"))
-    {      
+    if(snapShot.begin()->getID() == "SIGN")
+    {     
+        //std::cout << "WRONG PLACE" << std::endl;
         // checks if the sign is close enough or not
         if(snapShot.begin()->getHeight() > 30){
             state = "CAR";

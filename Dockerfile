@@ -13,7 +13,7 @@ RUN cd /opt/sources && \
     cd build && \
     cmake .. && \
     make carControl && cp carControl /tmp && \
-    make carCommand && cp carCommand /tmp
+    make TerminalCommand && cp TerminalCommand /tmp
 
 
 #Deploy
@@ -24,4 +24,4 @@ RUN cd /opt/sources && \
     mkdir /opt
  WORKDIR /opt
  COPY --from=builder /tmp/carControl .
- COPY --from=builder /tmp/carCommand .
+ COPY --from=builder /tmp/TerminalCommand .

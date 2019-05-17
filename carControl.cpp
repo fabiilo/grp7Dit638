@@ -63,7 +63,7 @@ int32_t main(int32_t argc, char **argv){
     cluon::OD4Session od4CarReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::OD4Session od4SignReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::UDPSender UDPsender{"255.0.0.112", 1239};
-   
+
     float baseSpeed = std::stof(commandlineArguments["s"]);
     std::string message = "";
     std::string realMessage = "";
@@ -74,7 +74,9 @@ int32_t main(int32_t argc, char **argv){
     snapShot.clear();
 
     // recives commands from the Car Command Software
-    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &realMessage](std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/) noexcept {
+    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &realMessage]
+    (std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/)
+    noexcept {
             realMessage = data;
             if(VERBOSE == 1){
                 std::cout << data << " was sent by: " << sender << std::endl;
@@ -98,7 +100,7 @@ int32_t main(int32_t argc, char **argv){
 
     auto onCarReading{[&snapShot,VERBOSE,logicIsRunning](cluon::data::Envelope &&envelope)
             {   
-                if(logicIsRunning == 1){
+                
                 auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
                     std::string ID = msg.objID();
                     uint32_t height = msg.height();
@@ -110,13 +112,12 @@ int32_t main(int32_t argc, char **argv){
                         tempCar.print();
                     }
                 
-            }
+            
         }
     };
 
     auto onSignReading{[&snapShot,VERBOSE,logicIsRunning](cluon::data::Envelope &&envelope)
             {
-                if(logicIsRunning == 1){
                 auto msg = cluon::extractMessage<opendlv::proxy::SignReading>(std::move(envelope));
                     std::string type = msg.type();
                     uint32_t height = msg.height();
@@ -129,11 +130,13 @@ int32_t main(int32_t argc, char **argv){
                         tempSign.print();
                     }
                 }
-            }
+            
     };
 
-
     od4CarReading.dataTrigger(opendlv::proxy::CarReading::ID(), onCarReading);
+    
+
+
     od4SignReading.dataTrigger(opendlv::proxy::SignReading::ID(), onSignReading);
    // od4Distance.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistanceReading);
 
@@ -145,11 +148,11 @@ int32_t main(int32_t argc, char **argv){
     const int16_t turnDelay{2000};
     bool running = 1;
     std::string state ="";
-
+		
     // Main loop where the diffrent actions will be in place
     // State 
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-    while(running != 0){        
+    while(running != 0){      
 
         std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay*2));
         logicIsRunning = 0;

@@ -1,6 +1,3 @@
-/*
-    Author: Hakim El Amri (@Jorelsin) 
-*/
 #include <cstdint>
 #include <chrono>
 #include <iostream>
@@ -9,13 +6,11 @@
 #include <algorithm>
 #include <list>
 #include "cluon-complete.hpp"
-//#include "messages.hpp"
 #include "opendlv-standard-message-set.hpp"
 #include <pthread.h>
 
 class carObj {
     uint32_t ID, Xpos, Ypos, height, width;
-
 
     public:
     carObj();
@@ -82,6 +77,7 @@ int32_t main(int32_t argc, char **argv){
     float speed{0.0};
     float sonicDistReading{0.0};
     carObj temp(0,0,0,0,0);
+    carObj stopSignLastLocation(0,0,0,0,0);
     std::vector <carObj> snapShot = {temp};
     snapShot.clear();
 
@@ -94,7 +90,7 @@ int32_t main(int32_t argc, char **argv){
                 std::cout << data << " was sent by: " << sender << std::endl;
             }
         });
-
+    //onDistanceReading recives messages with data from sonar sensor.
     auto onDistanceReading{[VERBOSE, &speed, &baseSpeed, &sonicDistReading](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(envelope));
@@ -103,12 +99,12 @@ int32_t main(int32_t argc, char **argv){
                 {
                     sonicDistReading = msg.distance();
                     if(VERBOSE == 1){
-                    std::cout << "The reading of the DistanceReading is: " << sonicDistReading << std::endl;
+                    //std::cout << "The reading of the DistanceReading is: " << sonicDistReading << std::endl;
                     }
                 }
             }
     };
-
+    //onCarReading is recieving all objects, not only cars.
     auto onCarReading{[&snapShot,VERBOSE](cluon::data::Envelope &&envelope)
             {   
             auto msg = cluon::extractMessage<opendlv::proxy::CarReading>(std::move(envelope));
@@ -127,19 +123,19 @@ int32_t main(int32_t argc, char **argv){
         }
     };
 
-
     od4CarReading.dataTrigger(opendlv::proxy::CarReading::ID(), onCarReading);
-
     od4Distance.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistanceReading);
 
     opendlv::proxy::PedalPositionRequest pedalReq;
     opendlv::proxy::GroundSteeringRequest steerReq;
-    
+    //Set delays.
     const int16_t systemDelay{50};
     const int16_t delay{500};
     const int16_t turnDelay{2000};
-    bool running = 1;
     std::string state ="";
+
+    //Booleans for states of interest
+    bool running = 1;
     bool stopSignDetected = false;
     bool carRightDetected = false;
     bool carMidDetected = false;
@@ -152,19 +148,76 @@ int32_t main(int32_t argc, char **argv){
     // State 
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     while(running != 0){      
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay*2));
-        logicIsRunning = 0;
-        //state = stateView(snapShot,VERBOSE);
         int16_t stopSignLocation= -1;
+        //General delay to minimize performance required
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //hakims?
+        logicIsRunning = 0;
+        //We check if there is any object infront of us 
+        //We make sure that we're not at the stopsign yet
+        if(sonicDistReading > 0.2 && !atStopSign){
+            //Check if we have a stopsign in our recieved snapShots
+            if(stopSignLocation != -1){
+                //Locates where on the x-axis the stopsign is
+                if(stopSignLastLocation.getX() > 400){
+                    //Based on where the stopsign is on the x-axis we drive forward 
+                    //a dynamic amount of "goTimes"
+                    int goTimes = (640 - snapShot[stopSignLocation].getX()) / 30;
+                    //Iterate through goTimes with a small delay inbetween to have
+                    //a more consistent length, to not be affected by momentum.
+                    for(int i = 0; i < goTimes; i++){
+                        if(sonicDistReading > 0.2){
+                            pedalReq.position(0.11);
+                            od4Speed.send(pedalReq);
+                        }
+                        else{
+                            pedalReq.position(0.0);
+                            od4Speed.send(pedalReq);
+                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+                    }
+                    //Set the state that we've arrived at the stopsign.
+                    atStopSign = true;
+                }
+            }
+            else{
+                //In the "normal" case we simply wait and move forward.
+                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                pedalReq.position(0.11);
+                od4Speed.send(pedalReq);
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                pedalReq.position(0.0);
+                od4Speed.send(pedalReq);
+            }
+        }
+
+        else if (atStopSign){
+            //We wait for a new frame to check if we see any cars, if not, 
+            //we can drive. This only works for a t-cross.
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            if(snapShot.size() == 0){
+                pedalReq.position(0.11);
+                od4Speed.send(pedalReq);
+                std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+                pedalReq.position(0.0);
+                od4Speed.send(pedalReq);
+            }
+        }
+        //In cases where sonicdistance isn't > .2 nor at the stopsign (almost all cases);
+        else{
+            pedalReq.position(0.0);
+            od4Speed.send(pedalReq);
+        }
+        //Iterating through the recieved snapShots (objects detected)
         for (size_t i = 0; i < snapShot.size() && !atStopSign; ++i)
         {    
             if(VERBOSE){
                 snapShot[i].print();
             }
-            //Car DETECTED LÖGIC
+            //Car DETECTED LOGIC
             if (snapShot[i].getID() == 0){
                 //Intersection logic for car to the right
+                //Handles states
                 if (snapShot[i].getX() > 400){
                     if(VERBOSE){
                         std::cout << "Car to the RIGHT detected:" << std::endl;
@@ -172,23 +225,22 @@ int32_t main(int32_t argc, char **argv){
                     carRightDetected = true;
                 }
                 //Intersection logic for car in the middle
-                else if (snapShot[i].getX() > 100 && snapShot[i].getX() < 240 && snapShot[i].getWidth() < snapShot[i].getHeight()*2){
+                //Handles states
+                else if (snapShot[i].getX() > 100 && snapShot[i].getX() < 200 && snapShot[i].getWidth() < snapShot[i].getHeight()*2 && snapShot[i].getHeight() < 80){
                     if(VERBOSE){
                         std::cout << "Car to the MIDDLE detected" << std::endl;
                     }
                     carMidDetected = true;
                 }
-            }  
-
-
-            //Stop sign detected, insert good logic
+            } 
+            //Stopsign state logic
             else if(snapShot[i].getID() == 1){
                 stopSignDetected = true;
                 if (VERBOSE){
                     std::cout << "Stop sign detected" << std::endl; 
                 }
-                stopSignLocation = i;
-
+                //Saves latest stopsign seen.
+                stopSignLastLocation = snapShot[i];
             }
 
 
@@ -209,48 +261,6 @@ int32_t main(int32_t argc, char **argv){
                 noRightDetected = true;
             }
         }
-
-        if(sonicDistReading > 30 && sonicDistReading != 0 && !atStopSign){
-            pedalReq.position(0.11);
-            od4Speed.send(pedalReq);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            pedalReq.position(0.0);
-            od4Speed.send(pedalReq);
-            if(stopSignLocation != -1){
-                if(snapShot[stopSignLocation].getX() > 400){
-                    int goTimes = (640 - snapShot[stopSignLocation].getX()) / 30;
-                    for(int i = 0; i < goTimes; i++){
-                        if(sonicDistReading > 30 && sonicDistReading != 0){
-                            pedalReq.position(0.11);
-                            od4Speed.send(pedalReq);
-                        }
-                        else{
-                            pedalReq.position(0.0);
-                            od4Speed.send(pedalReq);
-                        }
-                        std::this_thread::sleep_for(std::chrono::milliseconds(150));
-                    }
-                    atStopSign = true;
-                }
-            }
-        }
-
-        else if (atStopSign){
-            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-            if(snapShot.size() == 0){
-                //Logik för att köra bil
-                pedalReq.position(0.11);
-                od4Speed.send(pedalReq);
-                std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-                pedalReq.position(0.0);
-                od4Speed.send(pedalReq);
-            }
-        }
-        else{
-            pedalReq.position(0.0);
-            od4Speed.send(pedalReq);
-        }
-        
         snapShot.clear();
         logicIsRunning = 1;
 

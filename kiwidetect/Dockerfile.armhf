@@ -33,6 +33,7 @@ ENV BUILD="ca-certificates \
          libjpeg-turbo \
          libpng \
          libwebp \
+         libstdc++ \
          tiff \
          libavc1394 \
          jasper-libs \
@@ -51,6 +52,7 @@ ENV DEV="clang \
          pkgconf \
          ffmpeg-dev \
          libwebp-dev \
+         musl-dev \
          openblas-dev \
          openexr-dev \
          gstreamer-dev \
@@ -68,14 +70,15 @@ RUN echo http://dl-4.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositorie
     apk upgrade && \
     apk --no-cache add ${BUILD} ${DEV}
 
-ARG OPENCV_VERSION=3.4.6
+ARG OPENCV_VERSION=4.1.0
  
 
 # Python dependencies
 RUN apk add --update --no-cache python3 python3-dev && \
     apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
             --update --no-cache py-numpy py-numpy-dev
-    
+
+RUN pip3 install numpy
 
     # Make Python3 as default
 RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
@@ -88,6 +91,8 @@ RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
     wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.tar.gz && \
     tar -xvzf $OPENCV_VERSION.tar.gz && \
     rm -vrf $OPENCV_VERSION.tar.gz && \
+    wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip && \
+    unzip opencv_contrib.zip && \
     # Configure
     mkdir -vp /tmp/opencv-$OPENCV_VERSION/build && \
     cd /tmp/opencv-$OPENCV_VERSION/build && \
@@ -97,6 +102,7 @@ RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
         -D CMAKE_C_COMPILER=/usr/bin/clang \
         -D CMAKE_CXX_COMPILER=/usr/bin/clang++ \
         -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib-${OPENCV_VERSION}/modules \
         # No examples
         -D INSTALL_PYTHON_EXAMPLES=NO \
         -D INSTALL_C_EXAMPLES=NO \
@@ -108,9 +114,10 @@ RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
         -D WITH_V4l=YES \
         -D WITH_TBB=NO \
         -D WITH_FFMPEG=YES \
-        -D WITH_GPHOTO2=YES \
+        -D WITH_GPHOTO2=NO \
         -D WITH_GSTREAMER=YES \
-        -D WITH_OPENGL=ON \
+        -D WITH_OPENGL=NO \
+        -D ENABLE_VFPV3=ON \
         # NO doc test and other bindings
         -D BUILD_DOCS=NO \
         -D BUILD_TESTS=NO \
@@ -125,7 +132,7 @@ RUN ln -vfs /usr/bin/python3 /usr/local/bin/python && \
         -D PYTHON3_EXECUTABLE=`which python3` \
         -D BUILD_opencv_python3=YES .. && \
     # Build
-    make -j`grep -c '^processor' /proc/cpuinfo` && \
+    make -j6 && \
     make install
 
 ENV LD_LIBRARY_PATH /usr/local/lib
@@ -158,5 +165,5 @@ RUN [ "cross-build-end" ]
 
 #WORKDIR /usr/bin
 #COPY --from=builder /tmp/bin/image-postprocessing-opencv .
-ENTRYPOINT ["/usr/bin/image-postprocessing-opencv"]
+#ENTRYPOINT ["/usr/bin/image-postprocessing-opencv"]
 

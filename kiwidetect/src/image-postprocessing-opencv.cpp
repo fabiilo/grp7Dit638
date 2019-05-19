@@ -42,6 +42,7 @@ float nmsThreshold = 0.4;
 int inpWidth = 416;
 int inpHeight = 416;
 vector<string> classes;
+OD4Session od4(112);
 
 // Give the configuration and weight files for the model
 String modelConfiguration = "/opt/sources/src/darknet-yolov3.cfg";
@@ -77,19 +78,24 @@ int32_t main(int32_t argc, char **argv) {
             // Interface to a running OpenDaVINCI session; here, you can send and receive messages.
             //cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
                 // Load the network
-
-
             cout << "staritng thread 1 ...\n";
             thread t1(loop, NAME, HEIGHT, WIDTH);
+            usleep(1000000);
             cout << "staritng thread 2 ...\n";
             thread t2(loop, NAME, HEIGHT, WIDTH);
+            usleep(1000000);
             cout << "staritng thread 3 ...\n";
             thread t3(loop, NAME, HEIGHT, WIDTH);
+            usleep(1000000);
+            cout << "staritng thread 4 ...\n";
+            thread t4(loop, NAME, HEIGHT, WIDTH);
             t1.join();
             t2.join();
             t3.join();
+            t4.join();
         retCode = 0;
     }
+    
     return retCode;
 }
 
@@ -172,23 +178,25 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
         }
     }
 
-
     vector<int> indices;
     NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
-    OD4Session od4(112);
     for (size_t i = 0; i < indices.size(); ++i)
     {
-        int idx = indices[i];
-        Rect box = boxes[idx];
-        //int width = box.width;
-        int height =  box.height;
-    opendlv::proxy::carReading object;
-    object.Xpos(box.x);
-    object.Ypos(box.y);
-    object.height(height);
-    object.objID("kiwicar");
+    uint32_t idx = indices[i];
+    Rect box = boxes[idx];
+    //int width = box.width;
+    uint32_t uheight =  box.height;
+    uint32_t uwidth = box.width;
+    uint32_t boxX = box.x;
+    uint32_t boxY = box.y;
+    opendlv::proxy::CarReading object;
+    object.Xpos(boxX);
+    object.Ypos(boxY);
+    object.height(uheight);;
+    object.width(uwidth);
+    object.objID(idx);
     od4.send(object);
-    cout << "Car found, Message sent\n" << box.x << "\n" << box.y << "\n" << height << "\n";
+    cout << "Car found, Message sent\n" << boxX << "\n" << boxY << "\n" << uheight << "\n";
     }
 }
 

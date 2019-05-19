@@ -80,7 +80,11 @@ int32_t main(int32_t argc, char **argv){
     carObj stopSignLastLocation(0,0,0,0,0);
     std::vector <carObj> snapShot = {temp};
     snapShot.clear();
-
+    //Drivecommand
+    //1 = go left
+    //2 = go straight
+    //3 = go right
+    uint16_t driveCommand = 0;
     // recives commands from the Car Command Software
     cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &realMessage]
     (std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/)
@@ -196,11 +200,56 @@ int32_t main(int32_t argc, char **argv){
             //we can drive. This only works for a t-cross.
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));
             if(snapShot.size() == 0){
-                pedalReq.position(0.11);
-                od4Speed.send(pedalReq);
-                std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-                pedalReq.position(0.0);
-                od4Speed.send(pedalReq);
+                if(noRightDetected || noLeftDetected){
+                    //Only allowed to go staight
+                    if(noRightDetected && noLeftDetected){
+                        if(driveCommand == 1){
+                            //CASE NOT ALLOWED DO SOMETHING TO TELL
+                        }
+                        else if(driveCommand == 2){
+                            //drive straight function call
+                        }
+                        else if(driveCommand == 3){
+                            //CASE NOT ALLOWED DO SOMETHING TO TELL
+                        }
+                    }
+                    //allowed to go right or straight
+                    else if(noLeftDetected){
+                        if(driveCommand == 1){
+                            //CASE NOT ALLOWED DO SOMETHING TO TELL
+                        }
+                        else if(driveCommand == 2){
+                            //drive straight function call
+                        }
+                        else if(driveCommand == 3){
+                            //drive right function call
+                        }
+                    }
+                    //allowed to got left or straigt
+                    else if(noRightDetected){
+                        if(driveCommand == 1){
+                            //drive left function call
+                        }
+                        else if(driveCommand == 2){
+                            //drive straight function call
+                        }
+                        else if(driveCommand == 3){
+                            //CASE NOT ALLOWED DO SOMETHING TO TELL
+                        }
+                    }
+                }
+                //allowed to go anywhere
+                else{
+                    if(driveCommand == 1){
+                        //drive left function call
+                    }
+                    else if(driveCommand == 2){
+                        //drive straight function call
+                    }
+                    else if(driveCommand == 3){
+                        //drive right function call
+                    }
+                }
             }
         }
         //In cases where sonicdistance isn't > .2 nor at the stopsign (almost all cases);

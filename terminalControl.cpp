@@ -36,13 +36,12 @@ int32_t main(int32_t argc, char **argv){
             std::cout << "Command : ";
             std::cin >> message;
             //make
-            if(message.size() < 10){}
+            if(message.size() < 10){
             transform(message.begin(), message.end(), message.begin(), ::toupper);
             sender.send(std::move(message));
             }   
             std::this_thread::sleep_for(std::chrono::milliseconds(delay));
         }
     
-        
     return 0;
 }

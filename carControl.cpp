@@ -68,7 +68,7 @@ int32_t main(int32_t argc, char **argv){
     const int16_t systemDelay{50};
     const int16_t delay{500};
     const int16_t turnDelay{2000};
-    const int16_t fullDealyAtIntersection{24000}
+    const int16_t fullDealyAtIntersection{24000};
 
     bool running = true;
     bool turningLeft = false;
@@ -90,10 +90,10 @@ int32_t main(int32_t argc, char **argv){
     std::vector <carObj> snapShot = {temp};
     std::vector <carObj> objectData = {temp};
     snapShot.clear();
-    dataFlow.clear();
+    objectData.clear();
 
     // recives commands from the Car Command Software
-    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE,]
+    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE]
     (std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/)
     noexcept {
             

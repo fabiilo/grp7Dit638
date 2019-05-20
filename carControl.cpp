@@ -78,6 +78,7 @@ int32_t main(int32_t argc, char **argv){
     bool signInFront = false;
     bool stoppedAtSign = false;
     bool stopCar = false;
+    bool panicCarStop = false;
     bool exitSoftware = false;
 
     std::string message = "";
@@ -138,7 +139,7 @@ int32_t main(int32_t argc, char **argv){
         });
 
     // deals with panic stop, if anything is to close enough the car will stop. 
-    auto onDistanceReading{[VERBOSE, systemDelay, resetValue, &pedalReq, &od4Speed](cluon::data::Envelope &&envelope)
+    auto onDistanceReading{[VERBOSE, &stopCar](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(envelope));
                 const uint16_t senderStamp = envelope.senderStamp(); 
@@ -146,8 +147,7 @@ int32_t main(int32_t argc, char **argv){
                 {
                     float sonicDistReading = msg.distance();
                     if(sonicDistReading < 0.2){
-                        pedalReq.position(resetValue)
-                        od4Speed.send(pedalReq);
+                        panicCarStop = true;
                         std::this_thread::sleep_for(std::chrono::milliseconds(delay));
                     }
 
@@ -202,122 +202,125 @@ int32_t main(int32_t argc, char **argv){
 
     // Main loop where the diffrent actions will be in place
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-    while(!running){      
+    while(!running){     
+
+        if(panicCarStop){
+            pedalReq.position(resetValue);
+            od4carSpeed.send(pedalReq);
+            if(exitSoftware){
+                pedalReq.position(resetValue);
+                steerReq.groundSteering(resetValue);
+                od4Speed.send(pedalReq);
+                od4Turn.send(steerReq);
+
+                if(VERBOSE == 1){
+                    UDPsender.send("GOOD NIGHT");
+                }
+                running = false;
+            }
+        } 
+        else{
          // resets all the vectors so no unnecessary data is stored between iterations of the loop
-        snapShot.clear();
-        objectData.clear();
-        std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay*2));
-        snapShot = objectData;
-        stateView(snapShot, VERBOSE, carInFront, signInFront);
+            snapShot.clear();
+            objectData.clear();
+            std::this_thread::sleep_for(std::chrono::milliseconds(systemDelay*2));
+            snapShot = objectData;
+            stateView(snapShot, VERBOSE, carInFront, signInFront);
 
         //will print out the snapShot vector so we know what is in it and in what order
-        if(VERBOSE){
-            std::vector <carObj> :: iterator it;
-            for(it = snapShot.begin(); it != snapShot.end(); ++it)    
-            { 
-                carObj temp = *it;        
-                temp.print();
+            if(VERBOSE){
+                std::vector <carObj> :: iterator it;
+                for(it = snapShot.begin(); it != snapShot.end(); ++it)    
+                { 
+                    carObj temp = *it;        
+                    temp.print();
+                }
             }
-        }
         
         // checks if there is a sign or a car in front of the vechicle
-        if(signInFront){
 
-            speed = calculatePedel(snapShot.begin()->getHeight(), baseSpeed);
-            pedalReq.position(speed);
-            od4Speed.send(pedalReq);
+            if(signInFront){
+
+                speed = calculatePedel(snapShot.begin()->getHeight(), baseSpeed);
+                pedalReq.position(speed);
+                od4Speed.send(pedalReq);
                  // Intersection locig
-            if(speed == 0){
-                stoppedAtSign = true;
-                if(snap.Shot.size()-1 <= 3){
-                std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay*(4*(snapShot.size()-1))));
-            }else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(fullDealyAtIntersection);
+                if(speed == 0){
+                    stoppedAtSign = true;
+                    if(snap.Shot.size()-1 <= 3){
+                    std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay*(4*(snapShot.size()-1))));
+                }else {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(fullDealyAtIntersection);
+                }
             }
-        }
-        else if(carInFront){
-            // Takes the car in fronts distance height and sets the speed based on it
-            speed = calculatePedel(snapShot.begin()->getHeight(), baseSpeed);
-            pedalReq.position(speed);
-            od4Speed.send(pedalReq);
-
-        }
-
-        if(exitSoftware){
-            pedalReq.position(resetValue);
-            steerReq.groundSteering(resetValue);
-            od4Speed.send(pedalReq);
-            od4Turn.send(steerReq);
-
-            if(VERBOSE == 1){
-                UDPsender.send("GOOD NIGHT");
+            else if(carInFront){
+                speed = calculatePedel(snapShot.begin()->getHeight(), baseSpeed);
+                pedalReq.position(speed);
+                od4Speed.send(pedalReq);
             }
-            running = false;
-        }else if(stopCar){
-            pedalReq.position(resetValue);
-            steerReq.groundSteering(resetValue);
-            od4Speed.send(pedalReq);
-            od4Turn.send(steerReq);
+
+            if(exitSoftware){
+                pedalReq.position(resetValue);
+                steerReq.groundSteering(resetValue);
+                od4Speed.send(pedalReq);
+                od4Turn.send(steerReq);
+
+                if(VERBOSE == 1){
+                    UDPsender.send("GOOD NIGHT");
+                }
+                running = false;
+            }else if(stopCar){
+                pedalReq.position(resetValue);
+                steerReq.groundSteering(resetValue);
+                od4Speed.send(pedalReq);
+                od4Turn.send(steerReq);
             
-            if(VERBOSE == 1){
-                UDPsender.send("The car STOPPED");
-            }
+                if(VERBOSE == 1){
+                    UDPsender.send("The car STOPPED");
+                }
 
-        }else if(drivingForward && stoppedAtSign){
-            pedalReq.position(speed);
-            od4Speed.send(pedalReq);
+            }else if(drivingForward && stoppedAtSign){
+                pedalReq.position(speed);
+                od4Speed.send(pedalReq);
             
-            if(VERBOSE == 1){
-                UDPsender.send("The car is moving FORWARD at the intersection");
-            }
+                if(VERBOSE == 1){
+                    UDPsender.send("The car is moving FORWARD at the intersection");
+                }
 
-        }else if (turningRight && stoppedAtSign){
-            pedalReq.position(intersectionSpeed);
-            od4Speed.send(pedalReq);
-            steerReq.groundSteering(rightTurnAngle);
-            od4Turn.send(steerReq);
+            }else if (turningRight && stoppedAtSign){
+                pedalReq.position(intersectionSpeed);
+                od4Speed.send(pedalReq);
+                steerReq.groundSteering(rightTurnAngle);
+                od4Turn.send(steerReq);
             
-            if(VERBOSE == 1){
-                UDPsender.send("The car is turning RIGHT  at the intersection");
+                if(VERBOSE == 1){
+                    UDPsender.send("The car is turning RIGHT  at the intersection");
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+                steerReq.groundSteering(resetValue);
+                od4Turn.send(steerReq);
+
+            }else if (turningLeft && stoppedAtSign){
+                pedalReq.position(intersectionSpeed);
+                od4Speed.send(pedalReq);
+                steerReq.groundSteering(leftTurnAngle);
+                od4Turn.send(steerReq);
+
+                if(VERBOSE == 1){
+                    UDPsender.send("The car is turning LEFT  at the intersection");
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+                steerReq.groundSteering(resetValue);
+                od4Turn.send(steerReq);
+
             }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
-            steerReq.groundSteering(resetValue);
-            od4Turn.send(steerReq);
-
-        }else if (turningLeft && stoppedAtSign){
-            pedalReq.position(intersectionSpeed);
-            od4Speed.send(pedalReq);
-            steerReq.groundSteering(leftTurnAngle);
-            od4Turn.send(steerReq);
-
-            if(VERBOSE == 1){
-                UDPsender.send("The car is turning LEFT  at the intersection");
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
-            steerReq.groundSteering(resetValue);
-            od4Turn.send(steerReq);
-
         }
     }
    
     return 0;
 }
-//checks a objects ditance from the car using Ultra-Sonic Sensors, panic stops if distance to small
-/*float panicStop(float distance, float currentVelocity){
-    float panicStop{0.0};
-    float minDistance{0.15};
-   
-   if(distance > minDistance){
-       return currentVelocity;
-   }else {
-       return panicStop;
-   } 
-    return currentVelocity;
-}
-*/
-
 // this is the function to calculate how fast the car should be when following the
 float calcualtePedal(float distance, float currentVelocity){
     float panicStop{0.0};
@@ -330,7 +333,6 @@ float calcualtePedal(float distance, float currentVelocity){
    } 
     return currentVelocity;
 }
-
 //Captures the messages from the Object Detection and returns a state based on the messages
 void stateView(std::vector<carObj> &snapShot, bool VERBOSE, bool &carInFront, bool &signInFront){
     
@@ -370,6 +372,3 @@ void stateView(std::vector<carObj> &snapShot, bool VERBOSE, bool &carInFront, bo
     }
 
 }
-
-
-

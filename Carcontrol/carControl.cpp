@@ -57,9 +57,9 @@ float calculatePedel(float distance, float currentVelocity);
 std::string stateView(std::vector<carObj> &snapShot, bool VERBOSE);
 void turnCarLeft();
 void turnCarRight();
-void driveForward();
+void driveForward(float speed);
 void stopCar();
-void exitSoftware();
+bool exitSoftware();
 
 int32_t main(int32_t argc, char **argv){
 
@@ -67,23 +67,31 @@ int32_t main(int32_t argc, char **argv){
 
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
     const bool VERBOSE{commandlineArguments.count("verbose") != 0};
-    bool logicIsRunning = 0;
 
     cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
-    
     cluon::OD4Session od4CarReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
     cluon::UDPSender UDPsender{"255.0.0.112", 1239};
 
+    //Booleans for states of interest
+    bool running = true;
+    bool stopSignDetected = false;
+    bool carRightDetected = false;
+    bool carMidDetected = false;
+    bool carLeftDetected = false;
+    bool noLeftDetected = false;
+    bool noRightDetected = false;
+    bool atStopSign = false;
+
     float baseSpeed = std::stof(commandlineArguments["s"]);
-    float speed{0.0};
     float sonicDistReading{0.0};
     carObj temp(0,0,0,0,0);
     carObj stopSignLastLocation(0,0,0,0,0);
     std::vector <carObj> snapShot = {temp};
     snapShot.clear();
     uint16_t driveCommand = 0;
+
     // recives commands from the Car Command Software
-    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &carCommand]
+    cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &driveCommand]
     (std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/)
     noexcept {
             if(data == "FORWARD"){
@@ -104,7 +112,7 @@ int32_t main(int32_t argc, char **argv){
             }
         });
     //onDistanceReading recives messages with data from sonar sensor.
-    auto onDistanceReading{[VERBOSE, &speed, &baseSpeed, &sonicDistReading](cluon::data::Envelope &&envelope)
+    auto onDistanceReading{[VERBOSE, &sonicDistReading](cluon::data::Envelope &&envelope)
             {
                 auto msg = cluon::extractMessage<opendlv::proxy::DistanceReading>(std::move(envelope));
                 const uint16_t senderStamp = envelope.senderStamp(); 
@@ -112,7 +120,7 @@ int32_t main(int32_t argc, char **argv){
                 {
                     sonicDistReading = msg.distance();
                     if(VERBOSE == 1){
-                    //std::cout << "The reading of the DistanceReading is: " << sonicDistReading << std::endl;
+                    std::cout << "The reading of the Ultrasonic Sensor is: " << sonicDistReading << std::endl;
                     }
                 }
             }
@@ -130,33 +138,16 @@ int32_t main(int32_t argc, char **argv){
                 snapShot.push_back(tempCar);
                 /*if(VERBOSE == 1){
                     std::cout << "car recieved" << std::endl;
-                }*/
-                
-            
+                }*/ 
         }
     };
 
     od4CarReading.dataTrigger(opendlv::proxy::CarReading::ID(), onCarReading);
     od4Distance.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistanceReading);
 
-    //Set delays.
-    const int16_t systemDelay{50};
-    const int16_t delay{500};
-    const int16_t turnDelay{2000};
-
-    //Booleans for states of interest
-    bool running = 1;
-    bool stopSignDetected = false;
-    bool carRightDetected = false;
-    bool carMidDetected = false;
-    bool carLeftDetected = false;
-    bool noLeftDetected = false;
-    bool noRightDetected = false;
-    bool atStopSign = false;
-		
     // Main loop where the diffrent actions will be in place
     // State 
-    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     while(running != 0){      
         int16_t stopSignLocation= -1;
         //General delay to minimize performance required
@@ -181,7 +172,7 @@ int32_t main(int32_t argc, char **argv){
                     //a more consistent length, to not be affected by momentum.
                     for(int i = 0; i < goTimes; i++){
                         if(sonicDistReading > 0.2){
-                            pedalReq.position(0.11);
+                            pedalReq.position(baseSpeed);
                             od4Speed.send(pedalReq);
                         }
                         else{
@@ -197,7 +188,7 @@ int32_t main(int32_t argc, char **argv){
             else{
                 //In the "normal" case we simply wait and move forward.
                 std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-                pedalReq.position(0.11);
+                pedalReq.position(baseSpeed);
                 od4Speed.send(pedalReq);
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 pedalReq.position(0.0);
@@ -212,21 +203,21 @@ int32_t main(int32_t argc, char **argv){
                 if(noRightDetected || noLeftDetected){
                     //Only allowed to go staight
                     if(noRightDetected && noLeftDetected){
-                            driveForward();
+                            driveForward(baseSpeed);
                         
                     }
                     //allowed to go right or straight
                     else if(noLeftDetected){
                         if(driveCommand == 1){
-                            driveForward();
-                        else if(driveCommand == 3){
+                            driveForward(baseSpeed);
+                        }else if(driveCommand == 3){
                             turnCarRight();
                         }
                     }
                     //allowed to got left or straigt
                     else if(noRightDetected){
                         if(driveCommand == 1){
-                           driveForward();
+                           driveForward(baseSpeed);
                         }
                         else if(driveCommand == 2){
                             turnCarLeft();
@@ -236,7 +227,7 @@ int32_t main(int32_t argc, char **argv){
                 //allowed to go anywhere
                 else{
                     if(driveCommand == 1){
-                        driveForward();
+                        driveForward(baseSpeed);
                     }
                     else if(driveCommand == 2){
                         turnCarLeft();
@@ -318,7 +309,7 @@ void turnCarLeft(){
     steerReq.groundSteering(0.42);
     od4Turn.send(steerReq);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     steerReq.groundSteering(0.0);
     od4Turn.send(steerReq);
 }
@@ -329,12 +320,12 @@ void turnCarRight(){
     steerReq.groundSteering(-0.28);
     od4Turn.send(steerReq);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(turnDelay));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     steerReq.groundSteering(0.0);
     od4Turn.send(steerReq);
 }
 
-void driveForward(){
+void driveForward(float speed){
     pedalReq.position(speed);
     od4Speed.send(pedalReq);         
 }
@@ -346,7 +337,7 @@ void stopCar(){
     od4Turn.send(steerReq);
 }
 
-void exitSoftware(bool running){
+bool exitSoftware(){
     pedalReq.position(0.0);
     steerReq.groundSteering(0.0);
     od4Speed.send(pedalReq);

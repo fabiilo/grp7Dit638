@@ -208,16 +208,16 @@ int32_t main(int32_t argc, char **argv){
             pedalReq.position(resetValue);
             od4carSpeed.send(pedalReq);
             if(exitSoftware){
-                pedalReq.position(resetValue);
                 steerReq.groundSteering(resetValue);
-                od4Speed.send(pedalReq);
                 od4Turn.send(steerReq);
 
-                if(VERBOSE == 1){
-                    UDPsender.send("GOOD NIGHT");
-                }
+                
                 running = false;
             }
+
+            if(VERBOSE == 1){
+                    UDPsender.send("GOOD NIGHT");
+                }
         } 
         else{
          // resets all the vectors so no unnecessary data is stored between iterations of the loop
@@ -244,6 +244,7 @@ int32_t main(int32_t argc, char **argv){
                 speed = calculatePedel(snapShot.begin()->getHeight(), baseSpeed);
                 pedalReq.position(speed);
                 od4Speed.send(pedalReq);
+                
                  // Intersection locig
                 if(speed == 0){
                     stoppedAtSign = true;
@@ -265,7 +266,7 @@ int32_t main(int32_t argc, char **argv){
                 od4Speed.send(pedalReq);
                 od4Turn.send(steerReq);
 
-                if(VERBOSE == 1){
+                if(VERBOSE){
                     UDPsender.send("GOOD NIGHT");
                 }
                 running = false;
@@ -275,15 +276,21 @@ int32_t main(int32_t argc, char **argv){
                 od4Speed.send(pedalReq);
                 od4Turn.send(steerReq);
             
-                if(VERBOSE == 1){
+                if(VERBOSE){
                     UDPsender.send("The car STOPPED");
                 }
 
+            }else if(panicCarStop){
+                pedalReq.position(resetValue);
+                od4carSpeed.send(pedalReq);
+                if(VERBOSE){
+                    UDPsender.send("PANIC STOP");
+                }
             }else if(drivingForward && stoppedAtSign){
                 pedalReq.position(speed);
                 od4Speed.send(pedalReq);
             
-                if(VERBOSE == 1){
+                if(VERBOSE){
                     UDPsender.send("The car is moving FORWARD at the intersection");
                 }
 
@@ -293,7 +300,7 @@ int32_t main(int32_t argc, char **argv){
                 steerReq.groundSteering(rightTurnAngle);
                 od4Turn.send(steerReq);
             
-                if(VERBOSE == 1){
+                if(VERBOSE){
                     UDPsender.send("The car is turning RIGHT  at the intersection");
                 }
 
@@ -307,7 +314,7 @@ int32_t main(int32_t argc, char **argv){
                 steerReq.groundSteering(leftTurnAngle);
                 od4Turn.send(steerReq);
 
-                if(VERBOSE == 1){
+                if(VERBOSE){
                     UDPsender.send("The car is turning LEFT  at the intersection");
                 }
 

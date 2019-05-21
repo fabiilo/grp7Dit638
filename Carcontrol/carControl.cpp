@@ -180,28 +180,25 @@ int32_t main(int32_t argc, char **argv){
                 if(stopSignLastLocation.getX() > detectAngle){
                     //Based on where the stopsign is on the x-axis we drive forward 
                     //a dynamic amount of "goTimes"
-                    int goTimes = (640 - stopSignLastLocation.getX()) / 30;
+                    int goTimes = (640 - stopSignLastLocation.getX()) / 15;
                     //Iterate through goTimes with a small delay inbetween to have
                     //a more consistent length, to not be affected by momentum.
-                    for(int i = 0; i < goTimes; i++){
-                        if(sonicDistReading > 0.2){
-                            pedalReq.position(baseSpeed);
-                            od4Speed.send(pedalReq);
-                            atStopSign = true;
-                        }
-                        else{
-                            pedalReq.position(0.0);
-                            od4Speed.send(pedalReq);
-                            atStopSign = false;
-                            break;
-                        }
-                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                    }
+                    std::cout << "Going forward to stopsign" << std::endl;
+                    pedalReq.position(baseSpeed);
+                    od4Speed.send(pedalReq);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(goTimes*50));
+                    atStopSign = true;
+                    pedalReq.position(0.0);
+                    od4Speed.send(pedalReq);
                     //Set the state that we've arrived at the stopsign. 
             }
             else{
+                if(VERBOSE){
+                    std::cout << "Standard driving forward" << std::endl;
+                }
+
                 //In the "normal" case we simply wait and move forward.
-                std::this_thread::sleep_for(std::chrono::milliseconds(6000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10000));
                 pedalReq.position(baseSpeed);
                 od4Speed.send(pedalReq);
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -238,27 +235,46 @@ int32_t main(int32_t argc, char **argv){
             }
             */
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-            if(snapShot.size() == 0){
+            std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+            // bool godToGo = false;
+            size_t counter = 0;
+            for(counter = 0; counter < snapShot.size(); counter++){
+                if(snapShot[counter].getID() != 0){
+                    break;
+                }
+            }
+            if(snapShot.size() == 0 || counter == snapShot.size()){
+                std::cout << "Waiting for command to drive" << std::endl;
                 if(noRightDetected || noLeftDetected){
                     //Only allowed to go staight
                     if(noRightDetected && noLeftDetected){
-                            driveCommand = 1;
+                        if(driveCommand == 1){
                             driveForward(baseSpeed);
                             if(VERBOSE){
                                 printMessage(driveCommand);
                             }
+                        }
+                        else if(driveCommand == 2){
+                            std::cout << "We're not allowd to go in this direction" << std::endl;
+                        }
+                        else if(driveCommand == 3){
+                            std::cout << "We're not allowd to go in this direction" << std::endl;
+                        }
                         
                     }
                     //allowed to go right or straight
                     else if(noLeftDetected){
-                        if(driveCommand == 1 || driveCommand == 2){
-                            driveCommand = 1;
+                        if(driveCommand == 1){
                             driveForward(baseSpeed);
                             if(VERBOSE){
                                 printMessage(driveCommand);
                             }
-                        }else if(driveCommand == 3){
+                        }
+                        else if(driveCommand == 2){
+                            std::cout << "We're not allowd to go in this direction" << std::endl;
+                        }
+
+                        else if(driveCommand == 3){
                             turnCarRight();
                             if(VERBOSE){
                                 printMessage(driveCommand);
@@ -267,8 +283,7 @@ int32_t main(int32_t argc, char **argv){
                     }
                     //allowed to got left or straigt
                     else if(noRightDetected){
-                        if(driveCommand == 1 || driveCommand == 3){
-                           driveCommand = 1;
+                        if(driveCommand == 1){
                            driveForward(baseSpeed);
                            if(VERBOSE){
                                 printMessage(driveCommand);
@@ -279,6 +294,9 @@ int32_t main(int32_t argc, char **argv){
                             if(VERBOSE){
                                 printMessage(driveCommand);
                             }
+                        }
+                        else if(driveCommand == 3){
+                            std::cout << "We're not allowd to go in this direction" << std::endl;
                         }
                     }
                 }
@@ -304,14 +322,17 @@ int32_t main(int32_t argc, char **argv){
                     }
                 }
             }
-
+            else{
+                std::cout << "Cars found, not going" << std::endl;
+                //Do nothing
+            }
             // resets the booleans after finishing driving through a intersection
-            atStopSign = false;
-            carLeftDetected = false;
-            carRightDetected = false;
-            carMidDetected = false;
-            noLeftDetected = false;
-            noRightDetected = false;
+            //atStopSign = false;
+            //carLeftDetected = false;
+            //carRightDetected = false;
+            //carMidDetected = false;
+            //noLeftDetected = false;
+            //noRightDetected = false;
         }
         //In cases where sonicdistance isn't > .2 nor at the stopsign (almost all cases);
         else{
@@ -381,31 +402,34 @@ int32_t main(int32_t argc, char **argv){
 void turnCarLeft(){
     pedalReq.position(0.12);
     od4Speed.send(pedalReq);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
     steerReq.groundSteering(0.42);
     od4Turn.send(steerReq);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
     steerReq.groundSteering(0.0);
     od4Turn.send(steerReq);
+    pedalReq.position(0.0);
+    od4Speed.send(pedalReq);
 }
 
 void turnCarRight(){
     pedalReq.position(0.12);
     od4Speed.send(pedalReq);
-    steerReq.groundSteering(-0.28);
+    steerReq.groundSteering(-0.5);
     od4Turn.send(steerReq);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     steerReq.groundSteering(0.0);
     od4Turn.send(steerReq);
+    pedalReq.position(0.0);
+    od4Speed.send(pedalReq);
 }
 
 void driveForward(float speed){
     pedalReq.position(speed);
     od4Speed.send(pedalReq);  
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));      
+    std::this_thread::sleep_for(std::chrono::milliseconds(4000));      
     pedalReq.position(0.0);
-    od4Speed.send(pedalReq); 
+    od4Speed.send(pedalReq);
 }
 
 void stopCar(){
@@ -420,7 +444,6 @@ bool exitSoftware(){
     steerReq.groundSteering(0.0);
     od4Speed.send(pedalReq);
     od4Turn.send(steerReq);
-
     return false;
 }
 

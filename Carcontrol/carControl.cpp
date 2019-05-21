@@ -11,6 +11,7 @@
 
 cluon::OD4Session od4Speed{112};
 cluon::OD4Session od4Turn{112};
+cluon::UDPSender UDPsender{"255.0.0.112", 1239};
 
 opendlv::proxy::PedalPositionRequest pedalReq;
 opendlv::proxy::GroundSteeringRequest steerReq;
@@ -60,6 +61,7 @@ void turnCarRight();
 void driveForward(float speed);
 void stopCar();
 bool exitSoftware();
+void printMessage(uint16_t driveCommand);
 
 int32_t main(int32_t argc, char **argv){
 
@@ -70,7 +72,7 @@ int32_t main(int32_t argc, char **argv){
 
     cluon::OD4Session od4Distance{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};   
     cluon::OD4Session od4CarReading{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
-    cluon::UDPSender UDPsender{"255.0.0.112", 1239};
+    
 
     //Booleans for states of interest
     bool running = true;
@@ -84,12 +86,16 @@ int32_t main(int32_t argc, char **argv){
 
     float baseSpeed = std::stof(commandlineArguments["s"]);
     float sonicDistReading{0.0};
+    uint16_t detectAngle{static_cast<uint16_t>(std::stoi(commandlineArguments["angle"]))};
+    uint16_t driveCommand = 0;
+
+
     carObj temp(0,0,0,0,0);
     carObj stopSignLastLocation(0,0,0,0,0);
     std::vector <carObj> snapShot = {temp};
     snapShot.clear();
-    uint16_t driveCommand = 0;
 
+    
     // recives commands from the Car Command Software
     cluon::UDPReceiver reciverCar("225.0.0.111", 1238,[VERBOSE, &driveCommand]
     (std::string &&data, std::string &&sender,  std::chrono::system_clock::time_point &&/*timepoint*/)
@@ -104,11 +110,10 @@ int32_t main(int32_t argc, char **argv){
                 driveCommand = 4;
             }else if(data == "EXIT"){
                 driveCommand = 5;
-
             }
 
             if(VERBOSE == 1){
-                std::cout << data << " was sent by: " << sender << std::endl;
+                std::cout << data << " command was sent by: " << sender << std::endl;
             }
         });
     //onDistanceReading recives messages with data from sonar sensor.
@@ -119,9 +124,9 @@ int32_t main(int32_t argc, char **argv){
                 if(senderStamp == 0)
                 {
                     sonicDistReading = msg.distance();
-                    if(VERBOSE == 1){
+                    /*if(VERBOSE == 1){
                     std::cout << "The reading of the Ultrasonic Sensor is: " << sonicDistReading << std::endl;
-                    }
+                    }*/
                 }
             }
     };
@@ -136,9 +141,13 @@ int32_t main(int32_t argc, char **argv){
                 uint32_t width = msg.width();
                 carObj tempCar(ID,Xpos,Ypos,height,width);
                 snapShot.push_back(tempCar);
-                /*if(VERBOSE == 1){
-                    std::cout << "car recieved" << std::endl;
-                }*/ 
+                if(VERBOSE == 1){
+                    if(tempCar.getID() == 0){
+                        std::cout << "A car was recieved" << std::endl;
+                    }else{
+                       std::cout << "A sign was recieved" << std::endl; 
+                    }
+                } 
         }
     };
 
@@ -149,45 +158,50 @@ int32_t main(int32_t argc, char **argv){
     // State 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     while(running != 0){      
-        int16_t stopSignLocation= -1;
         //General delay to minimize performance required
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if(driveCommand == 5){
             running = exitSoftware();
+            if(VERBOSE){
+                printMessage(driveCommand);
+            }
         }else if(driveCommand == 4){
             stopCar();
+            if(VERBOSE){
+                printMessage(driveCommand);
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }else{
         //We check if there is any object infront of us 
         //We make sure that we're not at the stopsign yet
         if(sonicDistReading > 0.2 && !atStopSign){
             //Check if we have a stopsign in our recieved snapShots
-            if(stopSignLocation != -1){
                 //Locates where on the x-axis the stopsign is
-                if(stopSignLastLocation.getX() > 400){
+                if(stopSignLastLocation.getX() > detectAngle){
                     //Based on where the stopsign is on the x-axis we drive forward 
                     //a dynamic amount of "goTimes"
-                    int goTimes = (640 - snapShot[stopSignLocation].getX()) / 30;
+                    int goTimes = (640 - stopSignLastLocation.getX()) / 30;
                     //Iterate through goTimes with a small delay inbetween to have
                     //a more consistent length, to not be affected by momentum.
                     for(int i = 0; i < goTimes; i++){
                         if(sonicDistReading > 0.2){
                             pedalReq.position(baseSpeed);
                             od4Speed.send(pedalReq);
+                            atStopSign = true;
                         }
                         else{
                             pedalReq.position(0.0);
                             od4Speed.send(pedalReq);
+                            atStopSign = false;
+                            break;
                         }
-                        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
-                    //Set the state that we've arrived at the stopsign.
-                    atStopSign = true;
-                }
+                    //Set the state that we've arrived at the stopsign. 
             }
             else{
                 //In the "normal" case we simply wait and move forward.
-                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(6000));
                 pedalReq.position(baseSpeed);
                 od4Speed.send(pedalReq);
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -198,29 +212,73 @@ int32_t main(int32_t argc, char **argv){
         else if (atStopSign){
             //We wait for a new frame to check if we see any cars, if not, 
             //we can drive. This only works for a t-cross.
-            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            /*
+            int que = 0;
+            if(firstStopAtSign){
+                if(carLeftDetected){
+                    que ++;
+                }
+
+                if(carMidDetected){
+                    que ++;
+                }
+
+                if(carRightDetected){
+                    que ++;
+                }
+
+                firsStopAtSign = false;
+            }else if(waitingAtIntersection && que > 0){
+                que -= 1;
+            }else{
+
+                //all the normal logic but end with the following statement
+                firstStopAtSign = true;
+                waitingAtIntersection = false;
+            }
+            */
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(6000));
             if(snapShot.size() == 0){
                 if(noRightDetected || noLeftDetected){
                     //Only allowed to go staight
                     if(noRightDetected && noLeftDetected){
+                            driveCommand = 1;
                             driveForward(baseSpeed);
+                            if(VERBOSE){
+                                printMessage(driveCommand);
+                            }
                         
                     }
                     //allowed to go right or straight
                     else if(noLeftDetected){
-                        if(driveCommand == 1){
+                        if(driveCommand == 1 || driveCommand == 2){
+                            driveCommand = 1;
                             driveForward(baseSpeed);
+                            if(VERBOSE){
+                                printMessage(driveCommand);
+                            }
                         }else if(driveCommand == 3){
                             turnCarRight();
+                            if(VERBOSE){
+                                printMessage(driveCommand);
+                            }
                         }
                     }
                     //allowed to got left or straigt
                     else if(noRightDetected){
-                        if(driveCommand == 1){
+                        if(driveCommand == 1 || driveCommand == 3){
+                           driveCommand = 1;
                            driveForward(baseSpeed);
+                           if(VERBOSE){
+                                printMessage(driveCommand);
+                            }
                         }
                         else if(driveCommand == 2){
                             turnCarLeft();
+                            if(VERBOSE){
+                                printMessage(driveCommand);
+                            }
                         }
                     }
                 }
@@ -228,15 +286,32 @@ int32_t main(int32_t argc, char **argv){
                 else{
                     if(driveCommand == 1){
                         driveForward(baseSpeed);
+                        if(VERBOSE){
+                            printMessage(driveCommand);
+                        }
                     }
                     else if(driveCommand == 2){
                         turnCarLeft();
+                        if(VERBOSE){
+                            printMessage(driveCommand);
+                        }
                     }
                     else if(driveCommand == 3){
                         turnCarRight();
+                        if(VERBOSE){
+                            printMessage(driveCommand);
+                        }
                     }
                 }
             }
+
+            // resets the booleans after finishing driving through a intersection
+            atStopSign = false;
+            carLeftDetected = false;
+            carRightDetected = false;
+            carMidDetected = false;
+            noLeftDetected = false;
+            noRightDetected = false;
         }
         //In cases where sonicdistance isn't > .2 nor at the stopsign (almost all cases);
         else{
@@ -327,7 +402,10 @@ void turnCarRight(){
 
 void driveForward(float speed){
     pedalReq.position(speed);
-    od4Speed.send(pedalReq);         
+    od4Speed.send(pedalReq);  
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));      
+    pedalReq.position(0.0);
+    od4Speed.send(pedalReq); 
 }
 
 void stopCar(){
@@ -344,4 +422,15 @@ bool exitSoftware(){
     od4Turn.send(steerReq);
 
     return false;
+}
+
+void printMessage(uint16_t driveCommand){
+
+    switch(driveCommand){
+        case 1: UDPsender.send("Car will go FORWARD at the intersection"); break;
+        case 2: UDPsender.send("Car will take a LEFT at the intersection");break;
+        case 3: UDPsender.send("Car will take a RIGHT at the intersection");break;
+        case 4: UDPsender.send("Car will STOP as soon as it can");break;
+        case 5: UDPsender.send("Car is shutting of and so is this terminal, GOOD NIGHT"); break;
+    }
 }

@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 cmake_minimum_required(VERSION 3.2)
 
 project(image-postprocessing-opencv)
-
 
 ################################################################################
 # Defining the relevant versions of OpenDLV Standard Message Set and libcluon.
@@ -85,13 +85,8 @@ if(UNIX)
 endif()
 
 
-
-
-
-find_package(OpenCV 3.4.6 REQUIRED)
+find_package(OpenCV 4.1.0 REQUIRED dnn imgproc core highgui)
 include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
-#include_directories( ${OpenCV_INCLUDE_DIRS})
-#set(OpenCV_LIBS "/user/local/lib")
 
 set(LIBRARIES ${LIBRARIES} ${OpenCV_LIBS})
 
@@ -106,7 +101,6 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 # Create executable.
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}.cpp ${CMAKE_BINARY_DIR}/opendlv-standard-message-set.hpp)
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
-#target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 
 ################################################################################
 # Install executable.

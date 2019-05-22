@@ -58,9 +58,11 @@ RUN echo http://dl-4.alpinelinux.org/alpine/v3.8/main > /etc/apk/repositories &&
         cmake \
         g++ \
         git \
-        make
+        make \
+        libstdc++
 
-ARG OPENCV_VERSION=3.4.6
+
+ARG OPENCV_VERSION=4.1.0
 
 RUN apk add --update --no-cache \
     # Build dependencies
@@ -97,6 +99,8 @@ RUN apk add --update --no-cache \
     wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.tar.gz && \
     tar -xvzf $OPENCV_VERSION.tar.gz && \
     rm -vrf $OPENCV_VERSION.tar.gz && \
+    wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip && \
+    unzip opencv_contrib.zip && \
     # Configure
     mkdir -vp /tmp/opencv-$OPENCV_VERSION/build && \
     cd /tmp/opencv-$OPENCV_VERSION/build && \
@@ -106,6 +110,7 @@ RUN apk add --update --no-cache \
         -D CMAKE_C_COMPILER=/usr/bin/clang \
         -D CMAKE_CXX_COMPILER=/usr/bin/clang++ \
         -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib-${OPENCV_VERSION}/modules \
         # No examples
         -D INSTALL_PYTHON_EXAMPLES=NO \
         -D INSTALL_C_EXAMPLES=NO \
@@ -160,4 +165,4 @@ RUN mkdir build && \
 
 #WORKDIR /usr/bin
 #COPY --from=builder /tmp/bin/image-postprocessing-opencv .
-ENTRYPOINT ["/usr/bin/image-postprocessing-opencv"]
+#ENTRYPOINT ["/usr/bin/image-postprocessing-opencv"]

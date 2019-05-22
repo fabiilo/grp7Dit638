@@ -42,6 +42,7 @@ float nmsThreshold = 0.4;
 int inpWidth = 416;
 int inpHeight = 416;
 vector<string> classes;
+OD4Session od4(112);
 
 // Give the configuration and weight files for the model
 String modelConfiguration = "/opt/sources/src/darknet-yolov3.cfg";
@@ -77,19 +78,24 @@ int32_t main(int32_t argc, char **argv) {
             // Interface to a running OpenDaVINCI session; here, you can send and receive messages.
             //cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
                 // Load the network
-
-
             cout << "staritng thread 1 ...\n";
             thread t1(loop, NAME, HEIGHT, WIDTH);
+            usleep(1000000);
             cout << "staritng thread 2 ...\n";
             thread t2(loop, NAME, HEIGHT, WIDTH);
+            usleep(1000000);
             cout << "staritng thread 3 ...\n";
             thread t3(loop, NAME, HEIGHT, WIDTH);
+            //usleep(1000000);
+            //cout << "staritng thread 4 ...\n";
+            //thread t4(loop, NAME, HEIGHT, WIDTH);
             t1.join();
             t2.join();
             t3.join();
+            //t4.join();
         retCode = 0;
     }
+    
     return retCode;
 }
 
@@ -115,9 +121,9 @@ void loop(string NAME, uint32_t HEIGHT, uint32_t WIDTH){
         sharedMemory->lock();
         {
             Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
-            temp = wrapped.clone();
+            frame = wrapped.clone();
         }
-        frame = temp(Rect(0, 120, WIDTH, 240)).clone();
+        //frame = temp(Rect(0, 120, WIDTH, 240)).clone();
         sharedMemory->unlock();
         cvtColor(frame, frame, CV_BGRA2BGR);
         blobFromImage(frame, blob, 1/255.0, cvSize(inpWidth, inpHeight), Scalar(0,0,0), true, false);
@@ -172,23 +178,28 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
         }
     }
 
-
     vector<int> indices;
     NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
-    OD4Session od4(112);
+    int counter = 0;
     for (size_t i = 0; i < indices.size(); ++i)
     {
-        int idx = indices[i];
-        Rect box = boxes[idx];
-        //int width = box.width;
-        int height =  box.height;
-    opendlv::proxy::carReading object;
-    object.Xpos(box.x);
-    object.Ypos(box.y);
-    object.height(height);
-    object.objID("kiwicar");
+    uint32_t idx = indices[i];
+    Rect box = boxes[idx];
+    //int width = box.width;
+    uint32_t classID = classIds[idx];
+    uint32_t uheight =  box.height;
+    uint32_t uwidth = box.width;
+    uint32_t boxX = box.x;
+    uint32_t boxY = box.y;
+    opendlv::proxy::CarReading object;
+    object.Xpos(boxX);
+    object.Ypos(boxY);
+    object.height(uheight);;
+    object.width(uwidth);
+    object.objID(classID);
     od4.send(object);
-    cout << "Car found, Message sent\n" << box.x << "\n" << box.y << "\n" << height << "\n";
+    counter++;
+    cout << counter << "Object found, Message sent\n" << "ID: "<< classID << "  xpos: " << boxX << "  ypos: " << boxY << "  height: " << uheight << "  width: " << uwidth << "\n";
     }
 }
 

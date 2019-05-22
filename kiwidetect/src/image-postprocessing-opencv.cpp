@@ -86,13 +86,13 @@ int32_t main(int32_t argc, char **argv) {
             usleep(1000000);
             cout << "staritng thread 3 ...\n";
             thread t3(loop, NAME, HEIGHT, WIDTH);
-            usleep(1000000);
-            cout << "staritng thread 4 ...\n";
-            thread t4(loop, NAME, HEIGHT, WIDTH);
+            //usleep(1000000);
+            //cout << "staritng thread 4 ...\n";
+            //thread t4(loop, NAME, HEIGHT, WIDTH);
             t1.join();
             t2.join();
             t3.join();
-            t4.join();
+            //t4.join();
         retCode = 0;
     }
     
@@ -121,9 +121,9 @@ void loop(string NAME, uint32_t HEIGHT, uint32_t WIDTH){
         sharedMemory->lock();
         {
             Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
-            temp = wrapped.clone();
+            frame = wrapped.clone();
         }
-        frame = temp(Rect(0, 120, WIDTH, 240)).clone();
+        //frame = temp(Rect(0, 120, WIDTH, 240)).clone();
         sharedMemory->unlock();
         cvtColor(frame, frame, CV_BGRA2BGR);
         blobFromImage(frame, blob, 1/255.0, cvSize(inpWidth, inpHeight), Scalar(0,0,0), true, false);
@@ -180,11 +180,13 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
 
     vector<int> indices;
     NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
+    int counter = 0;
     for (size_t i = 0; i < indices.size(); ++i)
     {
     uint32_t idx = indices[i];
     Rect box = boxes[idx];
     //int width = box.width;
+    uint32_t classID = classIds[idx];
     uint32_t uheight =  box.height;
     uint32_t uwidth = box.width;
     uint32_t boxX = box.x;
@@ -194,9 +196,10 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
     object.Ypos(boxY);
     object.height(uheight);;
     object.width(uwidth);
-    object.objID(idx);
+    object.objID(classID);
     od4.send(object);
-    cout << "Car found, Message sent\n" << boxX << "\n" << boxY << "\n" << uheight << "\n";
+    counter++;
+    cout << counter << "Object found, Message sent\n" << "ID: "<< classID << "  xpos: " << boxX << "  ypos: " << boxY << "  height: " << uheight << "  width: " << uwidth << "\n";
     }
 }
 

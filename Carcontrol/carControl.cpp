@@ -11,7 +11,7 @@
 
 cluon::OD4Session od4Speed{112};
 cluon::OD4Session od4Turn{112};
-cluon::UDPSender UDPsender{"255.0.0.112", 1239};
+cluon::UDPSender UDPsender{"225.0.0.112", 1239};
 
 opendlv::proxy::PedalPositionRequest pedalReq;
 opendlv::proxy::GroundSteeringRequest steerReq;
@@ -186,10 +186,14 @@ int32_t main(int32_t argc, char **argv){
                     std::cout << "Going forward to stopsign" << std::endl;
                     pedalReq.position(baseSpeed);
                     od4Speed.send(pedalReq);
+                    steerReq.groundSteering(-0.04);
+                    od4Turn.send(steerReq);
                     std::this_thread::sleep_for(std::chrono::milliseconds(goTimes*50));
                     atStopSign = true;
                     pedalReq.position(0.0);
                     od4Speed.send(pedalReq);
+                    steerReq.groundSteering(0.0);
+                    od4Turn.send(steerReq);
                     //Set the state that we've arrived at the stopsign. 
             }
             else{
@@ -363,6 +367,12 @@ int32_t main(int32_t argc, char **argv){
                     }
                     carMidDetected = true;
                 }
+                else if(snapShot[i].getX() < 100 && snapShot[i].getWidth() > snapShot[i].getHeight()*2){
+                    if(VERBOSE){
+                        std::cout << "Car to the LEFT detected" << std::endl;
+                    }
+                    carLeftDetected = true;
+                }
             } 
             //Stopsign state logic
             else if(snapShot[i].getID() == 1){
@@ -402,7 +412,7 @@ int32_t main(int32_t argc, char **argv){
 void turnCarLeft(){
     pedalReq.position(0.12);
     od4Speed.send(pedalReq);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     steerReq.groundSteering(0.42);
     od4Turn.send(steerReq);
     std::this_thread::sleep_for(std::chrono::milliseconds(1500));
@@ -413,14 +423,15 @@ void turnCarLeft(){
 }
 
 void turnCarRight(){
+    //Turn full on right
+    steerReq.groundSteering(-0.40);
     pedalReq.position(0.12);
+    od4Turn.send(steerReq);
     od4Speed.send(pedalReq);
-    steerReq.groundSteering(-0.5);
-    od4Turn.send(steerReq);
-    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2700));
     steerReq.groundSteering(0.0);
-    od4Turn.send(steerReq);
     pedalReq.position(0.0);
+    od4Turn.send(steerReq);
     od4Speed.send(pedalReq);
 }
 

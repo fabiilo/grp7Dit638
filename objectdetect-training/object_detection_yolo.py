@@ -30,8 +30,8 @@ with open(classesFile, 'rt') as f:
 
 # Give the configuration and weight files for the model and load the network using them.
 
-modelConfiguration = "/home/fabs/snowman-2/darknet-yolov3.cfg";
-modelWeights = "/home/fabs/snowman-2/weights/darknet-yolov3_final.weights";
+modelConfiguration = "/home/fabs/snowman-3/tiny.cfg";
+modelWeights = "/home/fabs/snowman-3/weights/tiny_7000.weights";
 
 net = cv.dnn.readNetFromDarknet(modelConfiguration, modelWeights)
 net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
@@ -165,7 +165,7 @@ while cv.waitKey(1) < 0:
     # Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
     t, _ = net.getPerfProfile()
     label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-    #cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+    cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
     # Write the frame with the detection boxes
     if (args.image):
